@@ -12,7 +12,7 @@ README 这里只转述结论，不复述全部细节。
 
 | 模块 | 结论 | 证据 |
 |---|---|---|
-| M1 LLM 网关 | smoke 6/6 PASS；live 真打 ollama 3/3 成功 + 复现思考型模型静默失败 | `results/m1_gateway.json`, `m1_gateway_live.json` |
+| M1 LLM 网关 | smoke 5 项断言 PASS + 1 项记账核对；live 真打 ollama 3/3 成功 + 现场复现思考型模型静默失败 | `results/m1_gateway.json`, `m1_gateway_live.json` |
 | M2 可观测台 | span 派生指标 + 4 项口径断言 PASS | `results/m2_observability.json` |
 | M3 上下文压缩 | 5 策略对比，含 1 条负例基准 | `results/m3_context_compact.json` |
 | M4 工具沙箱 | 白名单/审计/重试/死信 8 项断言 PASS | `results/m4_tool_sandbox.json` |
