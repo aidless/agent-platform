@@ -1,0 +1,56 @@
+{
+  "milestone": "M6a",
+  "mode": "真实 PostgreSQL 17.11（docker 容器 aihot-db-1，库 aplat_etl）",
+  "generated_at": 1791719786238,
+  "findings": [
+    "D1 schema 契约：6 列，缺 []、多 []、类型一致=True，指纹=a01c3dece9a4e5c8 → PASS",
+    "D2 漂移门禁：指纹未变（a01c3dece9a4e5c8）（指纹变化则记 etl_schema_version 并拒同步） → PASS",
+    "同步：上游 2000 行 → SQLite 2000 行，列 ['order_id', 'customer_id', 'status', 'amount_cents', 'created_at', 'updated_at'] → PASS",
+    "D3 确定性：两次入库的 SQLite 文件 sha256 相同（3aec597facb4c9ad…） → PASS",
+    "D4 慢查询：无索引计划=「SCAN etl_orders」→ 加 ix_etl_cust 后=「SEARCH etl_orders USING INDEX ix_etl_cust (customer_id=?)」，命中 12 行 → PASS",
+    "D5 质量门禁：2000 行，主键空值 0、重复主键 0、负金额 0（三项全 0 才放行）→ PASS"
+  ],
+  "refutes": [
+    "aplat_etl 是本次新建的独立库，不碰已有的 aihot 数据；但 Docker exec 仍需宿主机 docker 权限，不是纯本地。",
+    "同步用 psql \\copy 的 CSV 管道，未处理 NULL 语义转换与二进制列；生产管道应换 psycopg2 或 COPY TO STDOUT BINARY。",
+    "慢查询数据是 12k 行合成表，只能证明『索引改变查询计划』，给不出真实数据量下的绝对耗时。",
+    "schema 指纹只覆盖列名+类型，不覆盖约束、索引、默认值；上游加一条 CHECK 约束不会被本门禁发现。"
+  ],
+  "results": {
+    "upstream_schema": {
+      "order_id": "integer",
+      "customer_id": "integer",
+      "status": "text",
+      "amount_cents": "integer",
+      "created_at": "timestamp with time zone",
+      "updated_at": "timestamp with time zone"
+    },
+    "type_mismatches": {},
+    "fingerprint": "a01c3dece9a4e5c8",
+    "drift_state": "指纹未变（a01c3dece9a4e5c8）",
+    "synced_rows": 2000,
+    "columns": [
+      "order_id",
+      "customer_id",
+      "status",
+      "amount_cents",
+      "created_at",
+      "updated_at"
+    ],
+    "determinism": {
+      "sha256_a": "3aec597facb4c9ad551ac8c8bc0b971452e39196a7a402ec89def9ecf4c11792",
+      "sha256_b": "3aec597facb4c9ad551ac8c8bc0b971452e39196a7a402ec89def9ecf4c11792"
+    },
+    "slow_query": {
+      "plan_before": "SCAN etl_orders",
+      "plan_after": "SEARCH etl_orders USING INDEX ix_etl_cust (customer_id=?)",
+      "rows": 12
+    },
+    "quality": {
+      "rows": 2000,
+      "null_key": 0,
+      "dup_id": 0,
+      "negative_amount": 0
+    }
+  }
+}

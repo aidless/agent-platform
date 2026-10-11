@@ -1,0 +1,103 @@
+{
+  "ollama_version": "0.33.3",
+  "models": [
+    "agi-sft-qwen3-0.6b:round22",
+    "agi-sft-smollm2-round20:latest",
+    "agi-sft-smollm2-validation:round18",
+    "copilot-3b-lora-v2:latest",
+    "copilot-3b-lora-v3:latest",
+    "copilot-3b-lora-v3b:latest",
+    "copilot-3b-lora-v3c:latest",
+    "copilot-3b-lora:latest",
+    "deepseek-r1:7b",
+    "gemma3:4b",
+    "lfm2.5:2.6b",
+    "llama3.1:8b",
+    "llama3.2:1b",
+    "llama3.2:3b",
+    "moondream:latest",
+    "nomic-embed-text:latest",
+    "qwen2.5-coder:3b",
+    "qwen2.5-coder:7b",
+    "qwen2.5:1.5b-instruct-q4_K_M",
+    "qwen2.5:3b",
+    "qwen2.5:3b-instruct-q4_K_M",
+    "qwen2.5:7b",
+    "qwen2.5vl:3b",
+    "qwen2:7b",
+    "qwen3:0.6b",
+    "qwen3:1.7b",
+    "qwen3:4b",
+    "qwen3:8b"
+  ],
+  "requests": [
+    {
+      "label": "RAG 一句话",
+      "status": "ok",
+      "http": 200,
+      "latency_ms": 13843,
+      "wall_ms": 13854,
+      "prompt_tokens": 17,
+      "completion_tokens": 52,
+      "content_head": "检索增强生成（Retrieval-Augmented Generation）是一种机器学习技术，通过使用检索模型和生成模型联合来提高生成模型的准确性和有效性。",
+      "degraded": false,
+      "error_kind": null
+    },
+    {
+      "label": "翻译",
+      "status": "ok",
+      "http": 200,
+      "latency_ms": 817,
+      "wall_ms": 827,
+      "prompt_tokens": 15,
+      "completion_tokens": 9,
+      "content_head": "Today's weather is nice.",
+      "degraded": false,
+      "error_kind": null
+    },
+    {
+      "label": "列举",
+      "status": "ok",
+      "http": 200,
+      "latency_ms": 11012,
+      "wall_ms": 11032,
+      "prompt_tokens": 11,
+      "completion_tokens": 110,
+      "content_head": "以下是三个 Python 列表方法：\n\n1.  **append()**：在列表末尾添加一个元素。\n\n    ```python\nmy_list = [1, 2",
+      "degraded": false,
+      "error_kind": null
+    },
+    {
+      "label": "幂等重放(live-0)",
+      "status": "cached",
+      "latency_ms": 0,
+      "total_tokens": 0,
+      "replay_of": "req_644271fcd2c3",
+      "degraded": false
+    }
+  ],
+  "findings": [
+    "幂等重放：重复 live-0 后 status=cached、tokens=0、replay_of=req_644271fcd2c3。PASS：重复请求不再产生 token 成本",
+    "思考型模型实况：显式点名 qwen3:8b（num_predict=64）→ status=empty、empty=True、done_reason=length、thinking≈102 tokens、用时 36350ms。已被标记为 empty（不再伪装成成功）",
+    "延迟（n=3，llama3.2:3b 本机）：p50=11012.0ms p95=13559.9ms。样本极小，不能当 SLO 基线。"
+  ],
+  "thinking_model_probe": {
+    "model": "qwen3:8b",
+    "status": "empty",
+    "empty_content": true,
+    "done_reason": "length",
+    "thinking_tokens": 102,
+    "error_kind": "empty_content",
+    "latency_ms": 36350
+  },
+  "latency": {
+    "n": 3,
+    "p50_ms": 11012.0,
+    "p95_ms": 13559.9,
+    "max_ms": 13843
+  },
+  "refutes": [
+    "n=3 的 p50/p95 不具备统计意义，只证明链路可用。SLO 基线要求 n>=100 且分布稳定，本仓未达。",
+    "token 数为估算值（见 tokenizer.py），与真实 BPE 计数有偏差。"
+  ]
+}

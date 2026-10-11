@@ -1,0 +1,54 @@
+{
+  "milestone": "M1",
+  "generated_at": 1791719774665,
+  "mode": "smoke(offline, no network by design)",
+  "findings": [
+    "幂等重放：首条 ok / 重放 cached，重放 token=0 成本=$0.000000（期望 0）→ PASS",
+    "模型解析：请求 model=llama3.2:3b（route primary=qwen3:8b 的 fallback），实际使用=llama3.2:3b → PASS。修前该字段被无声丢弃（live 实测：curl 请求 3b、服务用了 8b）。",
+    "静默失败检测：thinking 型模型的空 content 被标记为 status=empty / error_kind=empty_content / done_reason=length / thinking≈121 tokens → PASS。修前会被记成 status=ok（live 实测：qwen3:8b 空回答 29.5s）",
+    "记账：3 行，合计 21 tokens、$0.000000（本机模型单价 0，外部价仅作对照口径）",
+    "降级：timeout 时降级到 fallback，仍失败 → status=error http=502 degraded=True → PASS",
+    "熔断：阈值 3，5 次请求实际打到上游 3 次（期望 3，其余被 circuit_open 拦截）→ PASS；当前状态 open"
+  ],
+  "refutes": [
+    "本机模型单价记为 0，因此 cost_usd 全 0 是记账口径而非缺陷；外部模型价（gpt-4o-mini 等）只用于对照，不发起调用。",
+    "--smoke 不打网络，验证的是控制流与记账，不验证真实延迟。真实延迟见 --live 的 p50/p95。"
+  ],
+  "results": {
+    "idempotent_replay": {
+      "first_status": "ok",
+      "second_status": "cached",
+      "second_tokens": 0,
+      "second_cost_usd": 0.0,
+      "replay_of_set": true
+    },
+    "model_resolution": {
+      "requested": "llama3.2:3b",
+      "used": "llama3.2:3b"
+    },
+    "empty_content": {
+      "status": "empty",
+      "http": 200,
+      "empty": true,
+      "done_reason": "length",
+      "thinking_tokens": 121,
+      "error_kind": "empty_content"
+    },
+    "ledger": {
+      "rows": 3,
+      "tokens": 21,
+      "cost_usd": 0.0
+    },
+    "degraded": {
+      "status": "error",
+      "degraded": true,
+      "error_kind": "timeout",
+      "http": 502
+    },
+    "breaker": {
+      "upstream_attempts": 3,
+      "state": "open",
+      "threshold": 3
+    }
+  }
+}

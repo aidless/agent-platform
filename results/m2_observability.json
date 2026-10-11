@@ -1,0 +1,81 @@
+{
+  "milestone": "M2",
+  "mode": "synthetic（脚本化客户端，非真实上游）",
+  "generated_at": 1791719784462,
+  "findings": [
+    "span 覆盖：40 条 trace、80 个 cache/upstream span（要求每条 trace ≥2）→ PASS",
+    "口径自洽：upstream span max duration=644ms ≤ 请求 max latency=644ms → PASS",
+    "缓存记账：7 次命中，其中 tokens≠0 的 0 次（要求 0，否则「复用不花钱」是假话）→ PASS",
+    "失败率含静默失败：15.0% = error 2 + empty 4（合成注入 30% timeout + 8% 思考型空回答；empty 必须 >0 否则这条断言是空的） → PASS"
+  ],
+  "refutes": [
+    "合成延迟来自 random.Random(20261011).lognormvariate(5.6,0.45)，不代表任何真实模型性能；真实 latency 需 M1 --live 重启后补测。",
+    "n=40 时 p95 的 bootstrap 区间很宽，属描述统计，不能写成 SLO。",
+    "错误率 30% 是脚本注入的上游超时率，不是 ollama 的真实可用率。真实可用率需在 M1 --live 下用 n≥100 复测。"
+  ],
+  "generation": {
+    "rows": 40,
+    "ok": 27,
+    "error": 13
+  },
+  "metrics": {
+    "requests_total": 40,
+    "status_counts": {
+      "ok": 22,
+      "empty": 4,
+      "degraded": 5,
+      "error": 2,
+      "cached": 7
+    },
+    "error_rate": 0.15,
+    "error_rate_breakdown": {
+      "error": 2,
+      "empty": 4
+    },
+    "cache_hit_count": 7,
+    "cache_hit_rate": 0.175,
+    "tokens_total": 2652,
+    "cost_usd_total": 0.0,
+    "latency_ms": {
+      "n": 31,
+      "p50": 236.0,
+      "p95": 524.5,
+      "max": 644,
+      "p50_ci95": [
+        185.0,
+        350.0
+      ]
+    },
+    "per_model": {
+      "qwen3:8b": {
+        "n": 35,
+        "p50_ms": 227.0,
+        "err": 6,
+        "tokens": 2172
+      },
+      "llama3.2:3b": {
+        "n": 5,
+        "p50_ms": 3.0,
+        "err": 0,
+        "tokens": 480
+      }
+    },
+    "spans_total": 80,
+    "span_status": {
+      "upstream": {
+        "skipped": 7,
+        "error": 11,
+        "ok": 22
+      },
+      "cache": {
+        "started": 33,
+        "hit": 7
+      }
+    },
+    "_口径": {
+      "clock": "latency_ms 由 monotonic_ms() 差值得到，不受 NTP 影响",
+      "span_start": "span.start_mono 是相对单次 chat() 起点的偏移，不能跨请求比较绝对值，只能比 duration_ms",
+      "n_小": "n<100 时 p95 属描述统计，不构成 SLO 承诺"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "milestone": "M6a",
+  "mode": "真实 PostgreSQL 17.11（docker 容器 aihot-db-1，库 aplat_etl）",
+  "drift_mode": true,
+  "generated_at": 1791719787074,
+  "findings": [
+    "D1 schema 契约：6 列，缺 []、多 []、类型一致=True，指纹=a01c3dece9a4e5c8 → PASS",
+    "D2 漂移门禁：指纹 a01c3dece9a4e5c8→80921e0fb2151b77（指纹变化则记 etl_schema_version 并拒同步） → PASS",
+    "同步：检测到 schema 漂移，按门禁规则拒绝同步，未写入任何一行 → PASS",
+    "D3：无同步数据（被漂移门禁拦截） → SKIPPED（不是 PASS）",
+    "D4：无同步数据（被漂移门禁拦截） → SKIPPED（不是 PASS）",
+    "D5：无同步数据（被漂移门禁拦截） → SKIPPED（不是 PASS）"
+  ],
+  "refutes": [
+    "aplat_etl 是本次新建的独立库，不碰已有的 aihot 数据。",
+    "漂移用例靠 ADD/DROP COLUMN 注入；已用 DROP 清理，但 ALTER 会让表短暂不可用，生产上应先在从库演练。",
+    "指纹只覆盖列名+类型，不覆盖约束/索引/默认值。"
+  ],
+  "results": {
+    "upstream_schema": {
+      "order_id": "integer",
+      "customer_id": "integer",
+      "status": "text",
+      "amount_cents": "integer",
+      "created_at": "timestamp with time zone",
+      "updated_at": "timestamp with time zone"
+    },
+    "type_mismatches": {},
+    "fingerprint": "a01c3dece9a4e5c8",
+    "drift_state": "指纹 a01c3dece9a4e5c8→80921e0fb2151b77",
+    "sync_decision": "blocked_by_drift_gate",
+    "columns": [
+      "amount_cents",
+      "created_at",
+      "customer_id",
+      "discount_cents",
+      "order_id",
+      "status",
+      "updated_at"
+    ],
+    "skipped": {
+      "D3": "无同步数据（被漂移门禁拦截）",
+      "D4": "无同步数据（被漂移门禁拦截）",
+      "D5": "无同步数据（被漂移门禁拦截）"
+    }
+  }
+}

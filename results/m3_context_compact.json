@@ -1,0 +1,130 @@
+{
+  "milestone": "M3",
+  "mode": "offline（确定性规则；摘要策略用占位摘要，无 LLM 参与）",
+  "generated_at": 1791719784705,
+  "question": "教辅黑名单会不会误伤召回？日志里还能不能留手机号？重复提问怎么合并？",
+  "k": 4,
+  "raw_tokens": 271,
+  "findings": [
+    "token 降幅：naive_sliding=69%、sliding=60%、summarize=21%、tag_filter=44%（最优 naive_sliding=69%）。基线 raw 为 0% 作对照。",
+    "关键约束保留[raw]：命中 2/2（[5, 9]），pinned 完整=True → PASS",
+    "关键约束保留[naive_sliding]：命中 1/2（[9]），pinned 完整=True → FAIL（负例基准，预期失败）",
+    "关键约束保留[sliding]：命中 2/2（[5, 9]），pinned 完整=True → PASS",
+    "关键约束保留[summarize]：命中 2/2（[5, 9]），pinned 完整=True → PASS",
+    "关键约束保留[tag_filter]：命中 2/2（[5, 9]），pinned 完整=True → PASS",
+    "naive_sliding 反例（预期失败）：只看最近 4 轮 → golden_recall=0.5、丢掉的约束轮=[5] → FAIL（符合预期：朴素滑窗会丢关键约束）。这正是 pinned 机制与生产 sliding_window 的区别。",
+    "pinned 增益：sliding(带pinned) golden_recall=1.0 vs naive=0.5 → PASS",
+    "策略取舍：naive 最省 token（69%）但丢约束；sliding 用 pinned 换回约束只多花 24 tokens；tag_filter 召回 7 轮（比 sliding 多 2 轮相关内容），代价是少省 17 个百分点的 token。没有哪个策略同时最优，所以默认取 sliding。"
+  ],
+  "refutes": [
+    "summarize 策略的摘要是确定性占位文本（首句截断），不是 LLM 生成的语义摘要；真实摘要质量需 --live 复测。",
+    "tag 匹配是关键词精确命中，不是语义检索；换个说法就召回不到，真实系统应替换成 embedding 召回，本仓未做。",
+    "样本是单个 12 轮会话，不是分布；token 降幅数字不能外推到长会话。",
+    "golden 只有 2 轮，golden_recall 的粒度是 0/0.5/1，没有统计意义。"
+  ],
+  "per_strategy": {
+    "raw": {
+      "tokens": 271,
+      "token_saving": 0.0,
+      "turns_kept": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "n_kept": 12,
+      "golden_recall": 1.0,
+      "golden_turns_found": [
+        5,
+        9
+      ],
+      "pinned_intact": true,
+      "tag_recall_fallback": false
+    },
+    "naive_sliding": {
+      "tokens": 84,
+      "token_saving": 0.69,
+      "turns_kept": [
+        9,
+        10,
+        11,
+        12
+      ],
+      "n_kept": 4,
+      "golden_recall": 0.5,
+      "golden_turns_found": [
+        9
+      ],
+      "pinned_intact": true,
+      "tag_recall_fallback": false
+    },
+    "sliding": {
+      "tokens": 108,
+      "token_saving": 0.6015,
+      "turns_kept": [
+        5,
+        9,
+        10,
+        11,
+        12
+      ],
+      "n_kept": 5,
+      "golden_recall": 1.0,
+      "golden_turns_found": [
+        5,
+        9
+      ],
+      "pinned_intact": true,
+      "tag_recall_fallback": false
+    },
+    "summarize": {
+      "tokens": 214,
+      "token_saving": 0.2103,
+      "turns_kept": [
+        0,
+        5,
+        9,
+        10,
+        11,
+        12
+      ],
+      "n_kept": 6,
+      "golden_recall": 1.0,
+      "golden_turns_found": [
+        5,
+        9
+      ],
+      "pinned_intact": true,
+      "tag_recall_fallback": false
+    },
+    "tag_filter": {
+      "tokens": 153,
+      "token_saving": 0.4354,
+      "turns_kept": [
+        3,
+        5,
+        7,
+        9,
+        10,
+        11,
+        12
+      ],
+      "n_kept": 7,
+      "golden_recall": 1.0,
+      "golden_turns_found": [
+        5,
+        9
+      ],
+      "pinned_intact": true,
+      "tag_recall_fallback": false
+    }
+  }
+}

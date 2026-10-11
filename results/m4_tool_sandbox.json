@@ -1,0 +1,112 @@
+{
+  "milestone": "M4",
+  "mode": "offline（本地 SQLite + 本地策略，无真实外部工具）",
+  "generated_at": 1791719784886,
+  "findings": [
+    "P1 白名单：4 次调用（3 个越权 + 1 个合法），被拒 3 次，合法调用 verdict=allowed → PASS",
+    "P1b 合法执行：白名单内工具执行一次返回 audit=ok（allowed 但未执行时应为 skipped，这里要 ok）→ PASS",
+    "P2a 审计（白名单阶段）：共 5 行 {'allowed': 2, 'denied': 3}（4 次判定 + 1 次合法执行）；越权 attempt 集合=[1]（应为 [1]） → PASS",
+    "P3a 可恢复：第 1、2 次抛 transient，第 3 次成功，实际调用 3 次 → PASS",
+    "P3b 不重试：ValueError 被判定不可重试，实际调用 1 次（要求 1）→ PASS",
+    "P3c 死信：连续 503 重试 5 次后进死信，实际调用 5 次、死信 1 条（attempts=5） → PASS",
+    "P2b 审计（全量）：共 14 行 {'allowed': 10, 'denied': 4}，期望 14 行（4 判定 + 1 执行 + flaky 2错1对 + fatal 1错 + 死信 5错） → PASS",
+    "P4 退避：4 次尝试间 3 次 sleep=[0.01, 0.02, 0.02]（确定性无 jitter，总墙钟 0ms）→ PASS"
+  ],
+  "refutes": [
+    "沙箱是进程内白名单 + 参数校验，不是 OS 级隔离；真实沙箱应用 seccomp/容器/独立用户，本仓未实现，因此 rm_rf/net.fetch 的拒绝只是策略层，不是安全边界。",
+    "「重试后可恢复」用的是本地假上游，不证明对真实 503 有效。",
+    "tool_audit 是单表 append-only，没有做防篡改哈希链；只做到可查，没做到不可抵赖。"
+  ],
+  "results": {
+    "denied": [
+      {
+        "tool": "rm_rf",
+        "verdict": "denied",
+        "reason": "tool 'rm_rf' 不在白名单"
+      },
+      {
+        "tool": "net.fetch",
+        "verdict": "denied",
+        "reason": "tool 'net.fetch' 不在白名单"
+      },
+      {
+        "tool": "exec",
+        "verdict": "denied",
+        "reason": "tool 'exec' 不在白名单"
+      },
+      {
+        "tool": "search",
+        "verdict": "allowed",
+        "reason": "args-ok"
+      }
+    ],
+    "allowed_exec": "ok",
+    "audit_counts": {
+      "allowed": 2,
+      "denied": 3
+    },
+    "audit_rows": [
+      {
+        "request_id": "req-p1",
+        "tool": "rm_rf",
+        "verdict": "denied",
+        "attempt": 1,
+        "outcome": "skipped"
+      },
+      {
+        "request_id": "req-p1",
+        "tool": "net.fetch",
+        "verdict": "denied",
+        "attempt": 1,
+        "outcome": "skipped"
+      },
+      {
+        "request_id": "req-p1",
+        "tool": "exec",
+        "verdict": "denied",
+        "attempt": 1,
+        "outcome": "skipped"
+      },
+      {
+        "request_id": "req-p1",
+        "tool": "search",
+        "verdict": "allowed",
+        "attempt": 1,
+        "outcome": "ok"
+      },
+      {
+        "request_id": "req-p1b",
+        "tool": "search",
+        "verdict": "allowed",
+        "attempt": 1,
+        "outcome": "ok"
+      }
+    ],
+    "retry": {
+      "attempts": 3,
+      "result": "ok",
+      "verdict": "ok"
+    },
+    "no_retry": {
+      "attempts": 1,
+      "verdict": "denied"
+    },
+    "dead_letter": [
+      {
+        "tool": "search",
+        "attempts": 5,
+        "last_error": "RuntimeError: always 503"
+      }
+    ],
+    "audit_rows_total": 14,
+    "audit_counts_total": {
+      "allowed": 10,
+      "denied": 4
+    },
+    "backoff_ms": [
+      0.01,
+      0.02,
+      0.02
+    ]
+  }
+}

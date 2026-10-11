@@ -1,0 +1,60 @@
+{
+  "milestone": "M5",
+  "mode": "offline 单测（注入 sleep，不真等待）",
+  "generated_at": 1791719785063,
+  "findings": [
+    "A1a 指数退避（jitter=False）：[0.1, 0.2, 0.4, 0.8, 1.0] 期望 [0.1, 0.2, 0.4, 0.8, 1.0] → PASS",
+    "A1b full jitter 上界：[0.032, 0.03, 0.26, 0.057, 0.535] 全部落在各自上界内且非全零 → PASS",
+    "A2 4xx 不熔断：连续 10 次 http_4xx 后 fails=0、state=closed（应为 0/closed）→ PASS",
+    "A3 熔断打开：3 次 5xx 后 state 序列=[('after_fail1', 'closed'), ('after_fail2', 'closed'), ('after_fail3', 'open'), ('open_allow', False)]（open 后 allow 必须 False）→ PASS",
+    "A4 half_open 探测：cooldown 到期后第一次 allow=True（放行探测），第二次 allow=False（同批请求其余拦住）→ PASS",
+    "A5 降级生效：primary 抛错时链路选择 fallback、返回 'fallback-result' → PASS",
+    "A6 全空降级：primary/fallback 都返回空 → raised 'all degraded options exhausted: empty re'（必须显式报错，不能静默返回空）→ PASS"
+  ],
+  "refutes": [
+    "退避序列用 seed=7 的确定性 jitter，只证明实现符合 full jitter 定义，不证明该参数在真实租户冲突下最优。",
+    "cooldown 用 0 / 1e9 两个极值验证状态迁移，真实 cooldown 的选择需要按上游恢复时间调，本仓给不出建议值。",
+    "half_open 单探测是进程内计数的，多副本部署时每个副本各放一个，不能替代分布式信号量。"
+  ],
+  "results": {
+    "backoff_no_jitter": [
+      0.1,
+      0.2,
+      0.4,
+      0.8,
+      1.0
+    ],
+    "four_xx_fails": 0,
+    "breaker_seq": [
+      [
+        "after_fail1",
+        "closed"
+      ],
+      [
+        "after_fail2",
+        "closed"
+      ],
+      [
+        "after_fail3",
+        "open"
+      ],
+      [
+        "open_allow",
+        false
+      ]
+    ],
+    "half_open": {
+      "first": true,
+      "second": false,
+      "state": "half_open"
+    },
+    "degrade": {
+      "chosen": "fallback",
+      "value": "fallback-result"
+    },
+    "degrade_all_empty": {
+      "chosen": "raised",
+      "value": "all degraded options exhausted: empty re"
+    }
+  }
+}
