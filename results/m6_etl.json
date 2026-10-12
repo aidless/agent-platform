@@ -1,10 +1,11 @@
 {
   "milestone": "M6a",
   "mode": "真实 PostgreSQL 17.11（docker 容器 aihot-db-1，库 aplat_etl）",
-  "generated_at": 1791719786238,
+  "generated_at": 1791763558211,
   "findings": [
     "D1 schema 契约：6 列，缺 []、多 []、类型一致=True，指纹=a01c3dece9a4e5c8 → PASS",
     "D2 漂移门禁：指纹未变（a01c3dece9a4e5c8）（指纹变化则记 etl_schema_version 并拒同步） → PASS",
+    "D2b 指纹覆盖度（加索引，列名类型全不变）：v1 指纹 a01c3dece9a4e5c8→a01c3dece9a4e5c8（漏报）；v2 指纹 3dca006af3b2c5bc→5bbf2edc2ba35310（抓到）；删索引后 v2 回到原值=True → PASS。v1 的漏报是本仓已声明的边界，这条断言把它变成了可观测的事实。",
     "同步：上游 2000 行 → SQLite 2000 行，列 ['order_id', 'customer_id', 'status', 'amount_cents', 'created_at', 'updated_at'] → PASS",
     "D3 确定性：两次入库的 SQLite 文件 sha256 相同（3aec597facb4c9ad…） → PASS",
     "D4 慢查询：无索引计划=「SCAN etl_orders」→ 加 ix_etl_cust 后=「SEARCH etl_orders USING INDEX ix_etl_cust (customer_id=?)」，命中 12 行 → PASS",
@@ -28,6 +29,20 @@
     "type_mismatches": {},
     "fingerprint": "a01c3dece9a4e5c8",
     "drift_state": "指纹未变（a01c3dece9a4e5c8）",
+    "fingerprint_coverage": {
+      "v1_before": "a01c3dece9a4e5c8",
+      "v1_after": "a01c3dece9a4e5c8",
+      "v1_detected": false,
+      "v2_before": "3dca006af3b2c5bc",
+      "v2_after": "5bbf2edc2ba35310",
+      "v2_detected": true,
+      "v2_restored_after_drop": true,
+      "facets_counts": {
+        "columns": 6,
+        "indexes": 2,
+        "constraints": 1
+      }
+    },
     "synced_rows": 2000,
     "columns": [
       "order_id",

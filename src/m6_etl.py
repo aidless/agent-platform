@@ -92,7 +92,56 @@ def read_schema() -> dict[str, str]:
 
 
 def fingerprint(cols: dict[str, str]) -> str:
+    """v1 指纹：只覆盖列名 + 类型。
+
+    这是本仓**已声明的一条边界**：上游加索引/约束/默认值它发现不了。
+    v2（fingerprint_v2）补上这些，并对同一场景给出「v1 漏报、v2 抓到」
+    的对照，避免把一个更弱的实现说成更强。
+    """
     canon = ";".join(f"{k}:{v.lower()}" for k, v in sorted(cols.items()))
+    return hashlib.sha256(canon.encode("utf-8")).hexdigest()[:16]
+
+
+def _q(sql: str) -> list[tuple[str, ...]]:
+    rc, out = psql(sql)
+    rows: list[tuple[str, ...]] = []
+    for line in out.splitlines():
+        if "|" not in line:
+            continue
+        parts = tuple(x.strip() for x in line.split("|"))
+        if parts and parts[0] and parts[0] not in ("column_name", "indexname",
+                                                  "conname", "table_name"):
+            rows.append(parts)
+    return rows
+
+
+def schema_facets() -> dict:
+    """把 schema 拆成四个面：列（含可空/默认值）、索引、约束、主键。
+
+    这是 v2 指纹的原料。企业里「上游悄悄加了 NOT NULL 或唯一索引」
+    比「加了一列」更常见，也更难发现。
+    """
+    cols = _q("""
+        SELECT column_name, data_type, is_nullable, COALESCE(column_default,'')
+        FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='orders'
+        ORDER BY ordinal_position;""")
+    idx = _q("""
+        SELECT indexname, indexdef FROM pg_indexes
+        WHERE schemaname='public' AND tablename='orders' ORDER BY indexname;""")
+    cons = _q("""
+        SELECT conname, contype, pg_get_constraintdef(oid) FROM pg_constraint
+        WHERE conrelid = 'public.orders'::regclass ORDER BY conname;""")
+    parsed_cols = {c[0]: {"type": c[1].lower(), "nullable": c[2],
+                          "default": c[3]} for c in cols}
+    return {"columns": parsed_cols,
+            "indexes": {i[0]: i[1] for i in idx},
+            "constraints": {c[0]: f"{c[1]}:{c[2]}" for c in cons}}
+
+
+def fingerprint_v2(facets: dict) -> str:
+    """v2 指纹：列（类型+可空+默认值）+ 索引定义 + 约束定义。"""
+    canon = C.json_dumps(facets)  # json_dumps 内部已 sort_keys
     return hashlib.sha256(canon.encode("utf-8")).hexdigest()[:16]
 
 
@@ -235,6 +284,38 @@ def main() -> int:
         f"D2 漂移门禁：{drift_state}"
         f"（指纹变化则记 etl_schema_version 并拒同步）"
         f" → {'PASS' if ok_d2 else 'FAIL'}")
+
+    # ---------------- D2b 指纹覆盖度：加索引这种漂移 v1 是否能发现 -------
+    # 场景：只加一个索引，列名与类型都不变。
+    # 期望：v1 指纹**不变**（漏报），v2 指纹**改变**（抓到）。
+    facets_before = schema_facets()
+    fp1_before = fingerprint({k: v["type"] for k, v in
+                              facets_before["columns"].items()})
+    fp2_before = fingerprint_v2(facets_before)
+    psql("CREATE INDEX IF NOT EXISTS ix_orders_status_probe ON orders(status);")
+    facets_after = schema_facets()
+    fp1_after = fingerprint({k: v["type"] for k, v in
+                             facets_after["columns"].items()})
+    fp2_after = fingerprint_v2(facets_after)
+    psql("DROP INDEX IF EXISTS ix_orders_status_probe;")
+    # 清理后必须回到原值，否则说明指纹依赖了外部瞬时状态
+    fp2_restored = fingerprint_v2(schema_facets())
+    v1_blind = (fp1_before == fp1_after)
+    v2_catches = (fp2_before != fp2_after)
+    v2_restores = (fp2_restored == fp2_before)
+    out["fingerprint_coverage"] = {
+        "v1_before": fp1_before, "v1_after": fp1_after, "v1_detected": not v1_blind,
+        "v2_before": fp2_before, "v2_after": fp2_after, "v2_detected": v2_catches,
+        "v2_restored_after_drop": v2_restores,
+        "facets_counts": {k: len(v) for k, v in facets_before.items()},
+    }
+    ok_d2b = v1_blind and v2_catches and v2_restores
+    findings.append(
+        f"D2b 指纹覆盖度（加索引，列名类型全不变）：v1 指纹 {fp1_before}→"
+        f"{fp1_after}（{'漏报' if v1_blind else '竟然抓到了'}）；"
+        f"v2 指纹 {fp2_before}→{fp2_after}（{'抓到' if v2_catches else '也漏了'}）；"
+        f"删索引后 v2 回到原值={v2_restores} → {'PASS' if ok_d2b else 'FAIL'}"
+        f"。v1 的漏报是本仓已声明的边界，这条断言把它变成了可观测的事实。")
 
     # ---------------- 同步数据（漂移即拒） ----------------
     # D2 的真正含义：指纹变了就一行都不写。所以下面按 drift 开/关分两条路径。

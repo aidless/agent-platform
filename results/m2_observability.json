@@ -1,7 +1,7 @@
 {
   "milestone": "M2",
   "mode": "synthetic（脚本化客户端，非真实上游）",
-  "generated_at": 1791719784462,
+  "generated_at": 1791763542917,
   "findings": [
     "span 覆盖：40 条 trace、80 个 cache/upstream span（要求每条 trace ≥2）→ PASS",
     "口径自洽：upstream span max duration=644ms ≤ 请求 max latency=644ms → PASS",
@@ -49,7 +49,7 @@
     "per_model": {
       "qwen3:8b": {
         "n": 35,
-        "p50_ms": 227.0,
+        "p50_ms": 226.0,
         "err": 6,
         "tokens": 2172
       },
@@ -62,14 +62,14 @@
     },
     "spans_total": 80,
     "span_status": {
-      "upstream": {
-        "skipped": 7,
-        "error": 11,
-        "ok": 22
-      },
       "cache": {
         "started": 33,
         "hit": 7
+      },
+      "upstream": {
+        "skipped": 7,
+        "ok": 22,
+        "error": 11
       }
     },
     "_口径": {

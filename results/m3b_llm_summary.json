@@ -1,0 +1,66 @@
+{
+  "milestone": "M3b",
+  "mode": "offline（确定性假摘要，同输入同输出）",
+  "generated_at": 1791763543237,
+  "prompt": "把下面的多轮对话压缩成一段不超过80字的中文摘要。硬性要求：对话中出现的所有约束性、偏好性、时间性信息必须逐条保留，不得省略；只写信息本身，不要评价。\n\n对话：\n",
+  "findings": [
+    "G1a 占位摘要的保真缺口（负例基准）：命中 []、丢失 ['无纺布', '周三下午']，要求至少丢 1 个 → PASS。这就是 README 说「摘要不是 LLM 摘要」的具体含义。",
+    "G1b 摘要器保真：命中 ['无纺布', '周三下午']、丢失 []（离线假摘要） → PASS",
+    "G2 代价：raw 215 tokens → 摘要器 69 tokens（省 68%）；占位摘要 224 tokens（比 raw 还胖，首句拼接不做归纳）= 只截断不归纳的实证。要求摘要器 ≥30% 且不高于占位版 → PASS",
+    "G3 离线确定性：mode=smoke(fake)，离线模式为同输入同输出 → PASS（保证 clone 后不联网可复现）"
+  ],
+  "refutes": [
+    "本模式的「LLM 摘要」是假上游，只验证控制流与指标口径，不说明真模型摘要质量。",
+    "golden 命中是词面包含（substring），不是语义等价。",
+    "样本是单个 6 轮会话，不能外推。"
+  ],
+  "results": {
+    "dialogue_turns": 10,
+    "golden": [
+      "无纺布",
+      "周三下午"
+    ],
+    "keep_last": 2,
+    "raw": {
+      "tokens": 215
+    },
+    "placeholder": {
+      "turns": 10,
+      "summary_tokens": 190,
+      "context_tokens": 224,
+      "kept": [
+        "[摘要 user:我上周在你们这买了个机械键盘，",
+        "通常是签收后七天以内给出处理结论。",
+        "那现在帮我看下订单到哪了。"
+      ],
+      "golden_found": [],
+      "golden_missed": [
+        "无纺布",
+        "周三下午"
+      ],
+      "summary": "[摘要 user:我上周在你们这买了个机械键盘，想先核对一下订单信息；user:对了，我是过敏体质，这点先说在前面；assistant:明白，这一条我记下来，后续会按这个要求处理；user:另外我工作日白天一般都不在家，这点也先记一下；as",
+      "_note": "首句拼接：自身 190tokens，与 raw 同量级，只截断不归纳"
+    },
+    "summarizer": {
+      "turns": 10,
+      "summary_tokens": 35,
+      "context_tokens": 69,
+      "kept": [
+        "[摘要] 包装材料必须换成无纺布的，很重要；周三",
+        "通常是签收后七天以内给出处理结论。",
+        "那现在帮我看下订单到哪了。"
+      ],
+      "golden_found": [
+        "无纺布",
+        "周三下午"
+      ],
+      "golden_missed": [],
+      "summary": "[摘要] 包装材料必须换成无纺布的，很重要；周三下午千万别安排配送（寒暄略）",
+      "kind": "fake(offline)"
+    },
+    "offline": {
+      "mode": true,
+      "deterministic": true
+    }
+  }
+}

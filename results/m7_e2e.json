@@ -1,0 +1,200 @@
+{
+  "milestone": "M7",
+  "mode": "offline（ScriptedUpstream，注入 5% timeout + 5% 空回答，可重复）",
+  "generated_at": 1791763558965,
+  "chain": [
+    "M1 gateway",
+    "M6 order store",
+    "M4 sandbox",
+    "M3 memory",
+    "M2 observability"
+  ],
+  "findings": [
+    "M3 压缩在链路里真的省了 token：1181 → 620（省 561，平均 48%） → PASS",
+    "pinned 约束：10 条（10 个工单各 1 条合规约束），压缩后仍在上下文里 → PASS",
+    "M2 可观测贯穿链路：10 条 trace / 10 次网关调用 / 6 条工具审计 → PASS",
+    "失败分类完备性：1 个失败工单，分类={'silent_empty_answer': 1}，未分类 0 → PASS",
+    "端到端口径 ⊇ 网关口径：端到端失败 1 ≥ 网关失败 1（端到端把工具失败也算进去，所以不会更少） → PASS",
+    "M4 沙箱在链路里真实参与（含非空性）：工具判定分布={'denied': 1, 'ok': 5}，要求同时出现 ok 与被拒 → PASS",
+    "被拒工具后的降级回答：1 个工单工具被拒，全部带 answered_without_tool_data 标记=[['tool_denied', 'answered_without_tool_data']] → PASS"
+  ],
+  "refutes": [
+    "工单只有 10 条、且是手写的，不是真实客服流量分布；端到端 p95 是描述统计，不构成 SLO。",
+    "离线模式的失败率（timeout 5% + 空回答 5%）是**脚本注入**的，不是 ollama 的真实可用率。",
+    "工具只做 order_id 精确查询，没有模糊匹配/多轮澄清；真实客服场景里「查不到」的比例会高得多。",
+    "没有用户侧反馈回路（工单是否解决），所以「成功」定义是「模型返回了非空内容」，不等于用户满意。",
+    "M6 的订单库是合成 2000 行，不是真实交易数据。"
+  ],
+  "summary": {
+    "tickets": 10,
+    "success": 9,
+    "failed": 1,
+    "failure_kinds": {
+      "silent_empty_answer": 1
+    },
+    "latency_ms": {
+      "p50": 47.0,
+      "p95": 56.2,
+      "max": 58,
+      "p50_ci95": [
+        41.0,
+        52.0
+      ]
+    },
+    "context_tokens": {
+      "compacted_sum": 620,
+      "uncompacted_sum": 1181,
+      "saved_tokens": 561,
+      "saved_pct_mean": 0.4752
+    },
+    "tokens": {
+      "prompt_sum": 1298,
+      "completion_sum": 149
+    },
+    "flags": {
+      "degraded": 1,
+      "tool_denied": 1,
+      "answered_without_tool_data": 1,
+      "empty_content": 1
+    }
+  },
+  "tickets": [
+    {
+      "id": "T00",
+      "text": "我的订单到哪了？",
+      "tool": "query_order",
+      "tool_verdict": "ok",
+      "llm_status": "ok",
+      "answer_len": 22,
+      "latency_ms": 54,
+      "failure": "",
+      "flags": [],
+      "ctx_tokens": 60,
+      "ctx_tokens_uncompacted": 116
+    },
+    {
+      "id": "T01",
+      "text": "这个订单能退款吗？",
+      "tool": "query_order",
+      "tool_verdict": "ok",
+      "llm_status": "ok",
+      "answer_len": 22,
+      "latency_ms": 51,
+      "failure": "",
+      "flags": [],
+      "ctx_tokens": 61,
+      "ctx_tokens_uncompacted": 117
+    },
+    {
+      "id": "T02",
+      "text": "你们的退货政策是什么？",
+      "tool": "",
+      "tool_verdict": "",
+      "llm_status": "degraded",
+      "answer_len": 14,
+      "latency_ms": 41,
+      "failure": "",
+      "flags": [
+        "degraded"
+      ],
+      "ctx_tokens": 63,
+      "ctx_tokens_uncompacted": 119
+    },
+    {
+      "id": "T03",
+      "text": "订单被别人签收了怎么办？",
+      "tool": "query_order",
+      "tool_verdict": "ok",
+      "llm_status": "ok",
+      "answer_len": 22,
+      "latency_ms": 46,
+      "failure": "",
+      "flags": [],
+      "ctx_tokens": 64,
+      "ctx_tokens_uncompacted": 120
+    },
+    {
+      "id": "T04",
+      "text": "发票能重开吗？",
+      "tool": "",
+      "tool_verdict": "",
+      "llm_status": "empty",
+      "answer_len": 0,
+      "latency_ms": 45,
+      "failure": "silent_empty_answer",
+      "flags": [
+        "empty_content"
+      ],
+      "ctx_tokens": 59,
+      "ctx_tokens_uncompacted": 115
+    },
+    {
+      "id": "T05",
+      "text": "我要投诉，订单一直没发货。",
+      "tool": "issue_refund",
+      "tool_verdict": "denied",
+      "llm_status": "ok",
+      "answer_len": 22,
+      "latency_ms": 48,
+      "failure": "",
+      "flags": [
+        "tool_denied",
+        "answered_without_tool_data"
+      ],
+      "ctx_tokens": 64,
+      "ctx_tokens_uncompacted": 121
+    },
+    {
+      "id": "T06",
+      "text": "怎么修改收货地址？",
+      "tool": "",
+      "tool_verdict": "",
+      "llm_status": "ok",
+      "answer_len": 14,
+      "latency_ms": 41,
+      "failure": "",
+      "flags": [],
+      "ctx_tokens": 61,
+      "ctx_tokens_uncompacted": 117
+    },
+    {
+      "id": "T07",
+      "text": "为什么扣了我两次钱？",
+      "tool": "query_order",
+      "tool_verdict": "ok",
+      "llm_status": "ok",
+      "answer_len": 22,
+      "latency_ms": 52,
+      "failure": "",
+      "flags": [],
+      "ctx_tokens": 62,
+      "ctx_tokens_uncompacted": 118
+    },
+    {
+      "id": "T08",
+      "text": "会员积分怎么算？",
+      "tool": "",
+      "tool_verdict": "",
+      "llm_status": "ok",
+      "answer_len": 14,
+      "latency_ms": 41,
+      "failure": "",
+      "flags": [],
+      "ctx_tokens": 60,
+      "ctx_tokens_uncompacted": 116
+    },
+    {
+      "id": "T09",
+      "text": "我要查一个不存在的订单号 00000000。",
+      "tool": "query_order",
+      "tool_verdict": "ok",
+      "llm_status": "ok",
+      "answer_len": 14,
+      "latency_ms": 58,
+      "failure": "",
+      "flags": [],
+      "ctx_tokens": 66,
+      "ctx_tokens_uncompacted": 122
+    }
+  ]
+}

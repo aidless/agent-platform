@@ -15,21 +15,40 @@ README 这里只转述结论，不复述全部细节。
 | M1 LLM 网关 | smoke 5 项断言 PASS + 1 项记账核对；live 真打 ollama 3/3 成功 + 现场复现思考型模型静默失败 | `results/m1_gateway.json`, `m1_gateway_live.json` |
 | M2 可观测台 | span 派生指标 + 4 项口径断言 PASS | `results/m2_observability.json` |
 | M3 上下文压缩 | 5 策略对比，含 1 条负例基准 | `results/m3_context_compact.json` |
+| **M3b 真 LLM 摘要** | 对比占位首句拼接：占位丢 2/2 金标且自身 224tokens 比 raw 215 还胖；摘要器命中 2/2、省 68% | `results/m3b_llm_summary.json` |
 | M4 工具沙箱 | 白名单/审计/重试/死信 8 项断言 PASS | `results/m4_tool_sandbox.json` |
+| **M4b OS 级隔离** | 8 条攻击性断言全 PASS（网络/只读/non-root/CapEff/内存/fork/超时/无残留），I0 为非空性对照 | `results/m4b_os_sandbox.json` |
 | M5 韧性层 | 退避/熔断/half_open 单探测/降级链 7 项 PASS | `results/m5_resilience.json` |
-| M6 数据管道 | 契约/漂移/确定性/慢查询/质量 6 项 PASS | `results/m6_etl.json`, `m6_etl_drift.json` |
+| M6 数据管道 | 契约/漂移/指纹覆盖度/确定性/慢查询/质量 7 项 PASS | `results/m6_etl.json`, `m6_etl_drift.json` |
+| **M7 端到端** | 六模块串联跑通 10 张工单：压缩省 48%、pinned 10/10、失败分类 1 个、M4 判定 {ok:5, denied:1} | `results/m7_e2e.json` |
+| **M8 成本与规模** | 并发 29.7→164.0 rps；索引三档加速 3.3/15.7/40.3×；云成本 $5.81–49.03/月 | `results/m8_scale.json` |
+
+加分项不是「又加了一个模块」，而是三件事：
+1. **M7 把六个孤立模块串成了一条真链路**（客服工单问答），端到端口径与单点口径的差异自己暴露出来。
+2. **M4b 把 README 里声明的「不是 OS 隔离」补成真 OS 隔离**（`python:3.12-slim` + 8 条攻击用例），其中"无残留容器"一条抓出了我自己的真 bug（`docker kill` 异步导致残留）。
+3. **M3b/M6-v2 把另两条已声明边界也补了**。
 
 ## 复现（四条命令，全离线）
 
 ```bash
 cd agent-platform
-python3 src/m1_gateway.py --smoke        # 幂等/记账/降级/熔断，不发网络
+python3 src/m1_gateway.py --smoke        # 幂等/记账/降级/熔断/模型解析/静默失败
 python3 src/m2_observability.py --smoke   # 合成 40 请求，验证指标口径
 python3 src/m3_context_compact.py --smoke # 5 种压缩策略 + 负例基准
+python3 src/m3b_llm_summary.py --smoke    # 真 LLM 摘要 vs 占位拼接（离线假上游）
 python3 src/m4_tool_sandbox.py --smoke    # 白名单/审计/重试/死信
+python3 src/m4b_os_sandbox.py --smoke     # 真 docker 隔离，8 条攻击断言
 python3 src/m5_resilience.py --smoke      # 退避形状/熔断状态机/降级
-python3 src/m6_etl.py --smoke             # 需要 docker 里有 aihot-db-1
+python3 src/m6_etl.py --smoke             # 契约/漂移/指纹/确定性/慢查询/质量
+python3 src/m7_e2e.py --smoke             # 六模块端到端，10 张工单
+python3 src/m8_scale.py --smoke           # 并发/索引规模/云成本推演
 ```
+
+补充说明：
+- `m4b` 与 `m6` 需要本机有 `python:3.12-slim` 镜像 / `aihot-db-1` 容器
+  （PostgreSQL）。缺失时 m4b 会记 **SKIPPED 而不是假 PASS**。
+- `m1 --live` / `m3b --live` 需要 ollama 与可用显存；本机显存被别的训练
+  任务占满时 llama-server 会被 SIGKILL，**这不是本仓缺陷**，见下文环境记录。
 
 M1 的 live 模式要单独跑，且每次用干净 db（复用旧库会让幂等键命中历史，
 把首请求显示成 cached——这是本次真实踩到的坑）：
@@ -136,17 +155,28 @@ PostgreSQL → SQLite 单向同步。`--drift` 会真往上游 `ADD COLUMN` 再 
 
 写在这里而不是藏在代码注释里，因为它们决定了这个仓能拿去说什么：
 
-1. **M4 沙箱不是 OS 级隔离**。它是进程内白名单 + 参数校验，拦得住「调了不该
-   调的工具」，拦不住「进程本身被攻破」。真实沙箱要 seccomp/容器/独立用户。
-2. **M3 的摘要不是 LLM 摘要**。`summarize` 策略的"摘要"是确定性首句截断；
-   语义摘要需要 `--live`，本仓未做。tag 匹配也是关键词命中，不是 embedding。
+1. ~~**M4 沙箱不是 OS 级隔离**~~ → **已于 M4b 补上 OS 级隔离**
+   （`src/aplat/os_sandbox.py` + `src/m4b_os_sandbox.py`，8 条攻击断言全 PASS）。
+   剩余边界：不覆盖容器逃逸与内核漏洞（那需要 gVisor/Kata/seccomp 白名单）。
+   原「进程内白名单」仍作为第一道防线保留，两层并用。
+2. ~~**M3 的摘要不是 LLM 摘要**~~ → **M3b 补上了真摘要路径**（`--live` 走本机
+   ollama，`--smoke` 走确定性假上游），并量出占位拼接的代价：**丢全部金标
+   约束、且自身 224 tokens 比不压缩的 raw 215 还胖**。剩余边界：占位版本仍留在
+   M3 里（负例基准），`--smoke` 的摘要器是假上游，不证明真模型质量。tag 匹配也是关键词命中，不是 embedding。
 3. **M6 的 CSV 管道不做 NULL/二进制语义转换**。本仓数据无 NULL，这个限制是
    真的限制；生产管道应换 `psycopg2` 或 `COPY TO STDOUT BINARY`。
-4. **schema 指纹只覆盖列名 + 类型**。上游加一条 CHECK 约束/默认值不会被发现。
+4. ~~**schema 指纹只覆盖列名 + 类型**~~ → **M6 D2b 补了 v2 指纹**（列的可空性、
+   默认值、索引定义、约束定义）。对照实证：只加一个索引时 v1 指纹不变（漏报），
+   v2 指纹改变（抓到），DROP 后回到原值。M6 现在用的是 v2。
 5. **M2 的 p95 不是 SLO**。n=40（合成）/n=3（live）时 p95 只是描述统计。
 6. **token 数是估算值**（`src/aplat/tokenizer.py` 的 CJK/拉丁规则），不是 BPE。
 7. **多副本部署下熔断是进程内的**。`provider_health` 不是分布式信号量。
 8. **M6 依赖宿主机 docker 权限**，不是纯本地可跑。
+9. **本机 LLM 推理受显存/内存制约**：`m1 --live` / `m3b --live` 在显存被
+   其他训练任务占满时 llama-server 会被 SIGKILL（2026-10-12 实测：宿主机
+   AIE 训练占 3454MiB GPU，剩余 2.2G 不足以加载 3B 模型，CPU 加载缓冲
+   1.3G 也分配失败）。**这是环境限制而非代码缺陷**；离线 smoke 路径全部
+   不依赖它。
 
 ## 仓库地图
 
@@ -158,7 +188,12 @@ src/aplat/tokenizer.py     CJK/拉丁混合 token 估算
 src/aplat/resilience.py    CircuitBreaker / Retrier / Degrader
 src/aplat/memory.py        会话记忆（tag 索引 + pinned 保护）
 src/aplat/sandbox.py       工具白名单 + 参数校验 + 审计链 + 死信
+src/aplat/os_sandbox.py       DockerSandbox：把代码关进受限容器执行（M4b）
 src/m1_gateway.py          M1 入口（--smoke / --live）
+src/m3b_llm_summary.py     M3b 入口：真 LLM 摘要 vs 占位
+src/m4b_os_sandbox.py      M4b 入口：8 条 OS 隔离攻击断言
+src/m7_e2e.py              M7 入口：端到端工单链路
+src/m8_scale.py            M8 入口：并发/索引/成本
 src/m2_observability.py    M2 入口
 src/m3_context_compact.py  M3 入口
 src/m4_tool_sandbox.py     M4 入口

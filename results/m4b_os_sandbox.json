@@ -1,0 +1,103 @@
+{
+  "milestone": "M4b",
+  "mode": "真实 docker 隔离（镜像 python:3.12-slim，非 mock）",
+  "generated_at": 1791763555356,
+  "isolation_args": {
+    "--network": "none",
+    "--memory": "64m",
+    "--memory-swap": "64m",
+    "--pids-limit": "32",
+    "--read-only": true,
+    "--tmpfs": "/tmp:rw,size=8m,noexec,nosuid",
+    "--user": "65534:65534",
+    "--cap-drop": "ALL",
+    "--security-opt": "no-new-privileges"
+  },
+  "findings": [
+    "I0 非空性对照：良性计算 6*7 在容器里执行，stdout='42'、exit=0 → PASS（这条保证了下面七条不是因为容器没起来而「假通过」）",
+    "I1 网络隔离（--network none）：容器内连 1.1.1.1:53 → 'BLOCKED OSError' → PASS",
+    "I2 文件系统只读（--read-only）：写 /etc/evil → 'BLOCKED OSError' → PASS",
+    "I3 非 root（--user 65534:65534）：容器内 uid=65534 → PASS",
+    "I4 权限收敛（--cap-drop ALL）：/proc/self/status CapEff=0000000000000000（全 0 才通过）→ PASS",
+    "I5 内存上限（--memory 64m）：申请 300MiB → exit=137 oom=True out='' → PASS",
+    "I6 进程数上限（--pids-limit 32）：fork 200 次 → exit=0 out='BLOCKED BlockingIOError 31' → PASS",
+    "I7 时间上限（外部 timeout=8s + docker rm -f）：死循环 → timed_out=True，用时 8204ms → PASS",
+    "无残留容器：超时路径 kill 后 docker ps -a 里 aplat-sbx-* 数量=0 [] → PASS"
+  ],
+  "refutes": [
+    "本层只隔离「代码执行」；容器逃逸、内核漏洞不在覆盖范围内（那需要 gVisor/Kata/seccomp 白名单与内核补丁）。",
+    "I6 的 fork 炸弹判据是「被限流或容器死亡」，没有精确核对 pids-limit=32 的边界值。",
+    "I5 只证明 300MiB 申请失败，没有测 cgroup 边界的精确阈值。",
+    "tmpfs 的 size=8m 未单独攻击（只验了根文件系统只读）。",
+    "容器启动本身有秒级开销，本层不适合高频小工具调用；生产上应是「热池 + 池内复用」而非每次 docker run。"
+  ],
+  "results": {
+    "image": "python:3.12-slim",
+    "ordered_cases": {
+      "I0_benign": {
+        "exit_code": 0,
+        "stdout": "42",
+        "stderr": "",
+        "timed_out": false,
+        "oom_killed": false,
+        "duration_ms": 710
+      },
+      "I1_network": {
+        "exit_code": 0,
+        "stdout": "BLOCKED OSError",
+        "stderr": "",
+        "timed_out": false,
+        "oom_killed": false,
+        "duration_ms": 540
+      },
+      "I2_readonly": {
+        "exit_code": 0,
+        "stdout": "BLOCKED OSError",
+        "stderr": "",
+        "timed_out": false,
+        "oom_killed": false,
+        "duration_ms": 339
+      },
+      "I3_nonroot": {
+        "exit_code": 0,
+        "stdout": "UID 65534",
+        "stderr": "",
+        "timed_out": false,
+        "oom_killed": false,
+        "duration_ms": 311
+      },
+      "I4_caps": {
+        "exit_code": 0,
+        "stdout": "CAPEFF 0000000000000000",
+        "stderr": "",
+        "timed_out": false,
+        "oom_killed": false,
+        "duration_ms": 342
+      },
+      "I5_membomb": {
+        "exit_code": 137,
+        "stdout": "",
+        "stderr": "",
+        "timed_out": false,
+        "oom_killed": true,
+        "duration_ms": 406
+      },
+      "I6_forkbomb": {
+        "exit_code": 0,
+        "stdout": "BLOCKED BlockingIOError 31",
+        "stderr": "",
+        "timed_out": false,
+        "oom_killed": false,
+        "duration_ms": 340
+      },
+      "I7_timeout": {
+        "exit_code": 124,
+        "stdout": "",
+        "stderr": "timeout",
+        "timed_out": true,
+        "oom_killed": false,
+        "duration_ms": 8204
+      }
+    }
+  }
+}

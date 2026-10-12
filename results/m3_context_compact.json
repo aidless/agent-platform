@@ -1,7 +1,7 @@
 {
   "milestone": "M3",
   "mode": "offline（确定性规则；摘要策略用占位摘要，无 LLM 参与）",
-  "generated_at": 1791719784705,
+  "generated_at": 1791763543105,
   "question": "教辅黑名单会不会误伤召回？日志里还能不能留手机号？重复提问怎么合并？",
   "k": 4,
   "raw_tokens": 271,
