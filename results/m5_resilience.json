@@ -1,7 +1,7 @@
 {
   "milestone": "M5",
   "mode": "offline 单测（注入 sleep，不真等待）",
-  "generated_at": 1791795900813,
+  "generated_at": 1791796073706,
   "findings": [
     "A1a 指数退避（jitter=False）：[0.1, 0.2, 0.4, 0.8, 1.0] 期望 [0.1, 0.2, 0.4, 0.8, 1.0] → PASS",
     "A1b full jitter 上界：[0.032, 0.03, 0.26, 0.057, 0.535] 全部落在各自上界内且非全零 → PASS",

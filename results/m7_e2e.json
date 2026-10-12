@@ -1,7 +1,7 @@
 {
   "milestone": "M7",
   "mode": "offline（ScriptedUpstream，注入 5% timeout + 5% 空回答，可重复）",
-  "generated_at": 1791795904664,
+  "generated_at": 1791796081548,
   "chain": [
     "M1 gateway",
     "M6 order store",
@@ -15,7 +15,7 @@
     "M2 可观测贯穿链路：10 条 trace / 10 次网关调用 / 6 条工具审计 → PASS",
     "失败分类完备性：1 个失败工单，分类={'silent_empty_answer': 1}，未分类 0 → PASS",
     "端到端口径 ⊇ 网关口径：端到端失败 1 ≥ 网关失败 1（端到端把工具失败也算进去，所以不会更少） → PASS",
-    "M4 沙箱在链路里真实参与（含非空性）：工具判定分布={'ok': 5, 'denied': 1}，要求同时出现 ok 与被拒 → PASS",
+    "M4 沙箱在链路里真实参与（含非空性）：工具判定分布={'denied': 1, 'ok': 5}，要求同时出现 ok 与被拒 → PASS",
     "被拒工具后的降级回答：1 个工单工具被拒，全部带 answered_without_tool_data 标记=[['tool_denied', 'answered_without_tool_data']] → PASS"
   ],
   "refutes": [
@@ -33,12 +33,12 @@
       "silent_empty_answer": 1
     },
     "latency_ms": {
-      "p50": 48.0,
-      "p95": 68.9,
-      "max": 77,
+      "p50": 183.0,
+      "p95": 313.8,
+      "max": 366,
       "p50_ci95": [
-        42.0,
-        55.5
+        166.0,
+        243.0
       ]
     },
     "context_tokens": {
@@ -52,10 +52,10 @@
       "completion_sum": 149
     },
     "flags": {
-      "answered_without_tool_data": 1,
+      "degraded": 1,
       "tool_denied": 1,
-      "empty_content": 1,
-      "degraded": 1
+      "answered_without_tool_data": 1,
+      "empty_content": 1
     }
   },
   "tickets": [
@@ -66,7 +66,7 @@
       "tool_verdict": "ok",
       "llm_status": "ok",
       "answer_len": 22,
-      "latency_ms": 77,
+      "latency_ms": 177,
       "failure": "",
       "flags": [],
       "ctx_tokens": 60,
@@ -79,7 +79,7 @@
       "tool_verdict": "ok",
       "llm_status": "ok",
       "answer_len": 22,
-      "latency_ms": 52,
+      "latency_ms": 366,
       "failure": "",
       "flags": [],
       "ctx_tokens": 61,
@@ -92,7 +92,7 @@
       "tool_verdict": "",
       "llm_status": "degraded",
       "answer_len": 14,
-      "latency_ms": 59,
+      "latency_ms": 172,
       "failure": "",
       "flags": [
         "degraded"
@@ -107,7 +107,7 @@
       "tool_verdict": "ok",
       "llm_status": "ok",
       "answer_len": 22,
-      "latency_ms": 42,
+      "latency_ms": 138,
       "failure": "",
       "flags": [],
       "ctx_tokens": 64,
@@ -120,7 +120,7 @@
       "tool_verdict": "",
       "llm_status": "empty",
       "answer_len": 0,
-      "latency_ms": 37,
+      "latency_ms": 160,
       "failure": "silent_empty_answer",
       "flags": [
         "empty_content"
@@ -135,7 +135,7 @@
       "tool_verdict": "denied",
       "llm_status": "ok",
       "answer_len": 22,
-      "latency_ms": 48,
+      "latency_ms": 198,
       "failure": "",
       "flags": [
         "tool_denied",
@@ -151,7 +151,7 @@
       "tool_verdict": "",
       "llm_status": "ok",
       "answer_len": 14,
-      "latency_ms": 42,
+      "latency_ms": 243,
       "failure": "",
       "flags": [],
       "ctx_tokens": 61,
@@ -164,7 +164,7 @@
       "tool_verdict": "ok",
       "llm_status": "ok",
       "answer_len": 22,
-      "latency_ms": 52,
+      "latency_ms": 250,
       "failure": "",
       "flags": [],
       "ctx_tokens": 62,
@@ -177,7 +177,7 @@
       "tool_verdict": "",
       "llm_status": "ok",
       "answer_len": 14,
-      "latency_ms": 46,
+      "latency_ms": 189,
       "failure": "",
       "flags": [],
       "ctx_tokens": 60,
@@ -190,7 +190,7 @@
       "tool_verdict": "ok",
       "llm_status": "ok",
       "answer_len": 14,
-      "latency_ms": 48,
+      "latency_ms": 171,
       "failure": "",
       "flags": [],
       "ctx_tokens": 66,

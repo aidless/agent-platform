@@ -1,10 +1,10 @@
 {
   "milestone": "M2",
   "mode": "synthetic（脚本化客户端，非真实上游）",
-  "generated_at": 1791795886919,
+  "generated_at": 1791796051829,
   "findings": [
     "span 覆盖：40 条 trace、80 个 cache/upstream span（要求每条 trace ≥2）→ PASS",
-    "口径自洽：upstream span max duration=644ms ≤ 请求 max latency=644ms → PASS",
+    "口径自洽：upstream span max duration=645ms ≤ 请求 max latency=645ms → PASS",
     "缓存记账：7 次命中，其中 tokens≠0 的 0 次（要求 0，否则「复用不花钱」是假话）→ PASS",
     "失败率含静默失败：15.0% = error 2 + empty 4（合成注入 30% timeout + 8% 思考型空回答；empty 必须 >0 否则这条断言是空的） → PASS"
   ],
@@ -38,24 +38,24 @@
     "cost_usd_total": 0.0,
     "latency_ms": {
       "n": 31,
-      "p50": 236.0,
-      "p95": 524.5,
-      "max": 644,
+      "p50": 240.0,
+      "p95": 525.0,
+      "max": 645,
       "p50_ci95": [
-        185.0,
+        187.0,
         350.0
       ]
     },
     "per_model": {
       "qwen3:8b": {
         "n": 35,
-        "p50_ms": 226.0,
+        "p50_ms": 227.0,
         "err": 6,
         "tokens": 2172
       },
       "llama3.2:3b": {
         "n": 5,
-        "p50_ms": 3.0,
+        "p50_ms": 12.0,
         "err": 0,
         "tokens": 480
       }
@@ -67,9 +67,9 @@
         "started": 33
       },
       "upstream": {
-        "skipped": 7,
         "ok": 22,
-        "error": 11
+        "error": 11,
+        "skipped": 7
       }
     },
     "_口径": {
