@@ -1,10 +1,10 @@
 {
   "milestone": "M8",
   "mode": "offline（固定延迟假上游 + 合成订单表，不发起任何外部调用）",
-  "generated_at": 1791795133362,
+  "generated_at": 1791795906646,
   "findings": [
-    "Q1 并发：24 请求，串行 vs 8 并发 → 串行 33.2 rps（p50=20.0ms），并发 146.1 rps（p50=20.0ms）；上游调用数 24→24（要求等于请求数，证明没有放大） → PASS",
-    "Q2 索引规模：1k/10k/100k 三档，无索引全为 SCAN（1000,10000,100000）；加 customer_id 索引后全部转 USING INDEX；三档加速 [5.41, 15.53, 40.75]（100k 档无索引 6.112ms → 有索引 0.15ms） → PASS",
+    "Q1 并发：24 请求，串行 vs 8 并发 → 串行 29.8 rps（p50=20.0ms），并发 98.8 rps（p50=20.0ms）；上游调用数 24→24（要求等于请求数，证明没有放大） → PASS",
+    "Q2 索引规模：1k/10k/100k 三档，无索引全为 SCAN（1000,10000,100000）；加 customer_id 索引后全部转 USING INDEX；三档加速 [6.36, 19.64, 36.82]（100k 档无索引 7.143ms → 有索引 0.194ms） → PASS",
     "Q3 成本推演：全部用 results/m7_e2e.json 的实测 token（10 个工单，prompt_sum=1298 / completion_sum=149），1k 请求/天×30 天 → 最便宜 qwen-plus(阿里) $5.81/月、最贵 claude-3-5-haiku $49.03/月（差 8.4×）；本机执行同用量现金成本 $0。注意：这是「同样用量上云」的对照，不是本机花费。"
   ],
   "refutes": [
@@ -22,10 +22,10 @@
         "requests": 24,
         "upstream_latency_ms": 20,
         "upstream_calls": 24,
-        "wall_ms": 724.0,
-        "throughput_rps": 33.2,
+        "wall_ms": 805.3,
+        "throughput_rps": 29.8,
         "latency_p50": 20.0,
-        "latency_p95": 20.8,
+        "latency_p95": 21.0,
         "errors": 0,
         "amplification": 1.0
       },
@@ -34,8 +34,8 @@
         "requests": 24,
         "upstream_latency_ms": 20,
         "upstream_calls": 24,
-        "wall_ms": 164.3,
-        "throughput_rps": 146.1,
+        "wall_ms": 243.0,
+        "throughput_rps": 98.8,
         "latency_p50": 20.0,
         "latency_p95": 21.0,
         "errors": 0,
@@ -48,12 +48,12 @@
         "plan_no_idx": [
           "SCAN etl_orders"
         ],
-        "ms_no_idx": 0.04,
+        "ms_no_idx": 0.06,
         "plan_with_idx": [
           "SEARCH etl_orders USING INDEX ix_etl_cust2 (customer_id=?)"
         ],
-        "ms_with_idx": 0.007,
-        "speedup": 5.41,
+        "ms_with_idx": 0.009,
+        "speedup": 6.36,
         "scan_seq": true,
         "uses_index": true
       },
@@ -62,12 +62,12 @@
         "plan_no_idx": [
           "SCAN etl_orders"
         ],
-        "ms_no_idx": 0.342,
+        "ms_no_idx": 0.731,
         "plan_with_idx": [
           "SEARCH etl_orders USING INDEX ix_etl_cust2 (customer_id=?)"
         ],
-        "ms_with_idx": 0.022,
-        "speedup": 15.53,
+        "ms_with_idx": 0.037,
+        "speedup": 19.64,
         "scan_seq": true,
         "uses_index": true
       },
@@ -76,12 +76,12 @@
         "plan_no_idx": [
           "SCAN etl_orders"
         ],
-        "ms_no_idx": 6.112,
+        "ms_no_idx": 7.143,
         "plan_with_idx": [
           "SEARCH etl_orders USING INDEX ix_etl_cust2 (customer_id=?)"
         ],
-        "ms_with_idx": 0.15,
-        "speedup": 40.75,
+        "ms_with_idx": 0.194,
+        "speedup": 36.82,
         "scan_seq": true,
         "uses_index": true
       }
