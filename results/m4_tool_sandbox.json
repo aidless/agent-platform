@@ -1,7 +1,7 @@
 {
   "milestone": "M4",
   "mode": "offline（本地 SQLite + 本地策略，无真实外部工具）",
-  "generated_at": 1791763543504,
+  "generated_at": 1791795887400,
   "findings": [
     "P1 白名单：4 次调用（3 个越权 + 1 个合法），被拒 3 次，合法调用 verdict=allowed → PASS",
     "P1b 合法执行：白名单内工具执行一次返回 audit=ok（allowed 但未执行时应为 skipped，这里要 ok）→ PASS",

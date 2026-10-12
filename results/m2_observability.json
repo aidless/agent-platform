@@ -1,7 +1,7 @@
 {
   "milestone": "M2",
   "mode": "synthetic（脚本化客户端，非真实上游）",
-  "generated_at": 1791763542917,
+  "generated_at": 1791795886919,
   "findings": [
     "span 覆盖：40 条 trace、80 个 cache/upstream span（要求每条 trace ≥2）→ PASS",
     "口径自洽：upstream span max duration=644ms ≤ 请求 max latency=644ms → PASS",
@@ -63,8 +63,8 @@
     "spans_total": 80,
     "span_status": {
       "cache": {
-        "started": 33,
-        "hit": 7
+        "hit": 7,
+        "started": 33
       },
       "upstream": {
         "skipped": 7,

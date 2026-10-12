@@ -1,6 +1,6 @@
 {
   "milestone": "M1",
-  "generated_at": 1791763532801,
+  "generated_at": 1791795877013,
   "mode": "smoke(offline, no network by design)",
   "findings": [
     "幂等重放：首条 ok / 重放 cached，重放 token=0 成本=$0.000000（期望 0）→ PASS",

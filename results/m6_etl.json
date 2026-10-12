@@ -1,7 +1,7 @@
 {
   "milestone": "M6a",
   "mode": "真实 PostgreSQL 17.11（docker 容器 aihot-db-1，库 aplat_etl）",
-  "generated_at": 1791763558211,
+  "generated_at": 1791795903853,
   "findings": [
     "D1 schema 契约：6 列，缺 []、多 []、类型一致=True，指纹=a01c3dece9a4e5c8 → PASS",
     "D2 漂移门禁：指纹未变（a01c3dece9a4e5c8）（指纹变化则记 etl_schema_version 并拒同步） → PASS",
