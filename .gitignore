@@ -7,3 +7,6 @@ __pycache__/
 *.db-shm
 # data/platform.db 是本地运行产物，不入库（结构和 DDL 在 src/aplat/common.py）
 data/*.db
+
+# 证据扫描输出：每次扫描都变，且是审计产物不是实验结果，不入库
+results/evidence_scan*.json
