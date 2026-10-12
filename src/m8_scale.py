@@ -182,20 +182,26 @@ def q3_cost(tokens_in: int, tokens_out: int, per_day: int,
             "plans": rows}
 
 
-def read_measured_tokens() -> tuple[int, int]:
-    """从落盘结果里取实测 token；取不到就明说，不用估计值。"""
-    tot_in = tot_out = n = 0
-    for name in ("m1_gateway_live.json", "m7_e2e.json"):
+def read_measured_tokens() -> dict:
+    """从落盘结果取**分模块**的实测 token，并把分母一起带回。
+
+    修为什么改：初版把 m1_gateway_live.json（n=3）与 m7_e2e.json（n=10）
+    的 token_sum 直接相加成单一 1298/149「per req」，那是两个不同分母的合计，
+    拿来按「每请求」外推会**低估**成本。现在改成逐模块返回，Q3 按最保守的
+    n=10 那组算，并把两个来源都写进结果。
+    """
+    out: dict[str, dict] = {}
+    for name, reqs in (("m1_gateway_live.json", 3), ("m7_e2e.json", 10)):
         p = C.RESULTS / name
         if not p.exists():
             continue
         d = json.loads(p.read_text(encoding="utf-8"))
         t = (d.get("summary", {}) or {}).get("tokens") or {}
         if t:
-            tot_in += t.get("prompt_sum", 0)
-            tot_out += t.get("completion_sum", 0)
-            n += 1
-    return tot_in, tot_out
+            out[name] = {"requests": reqs,
+                         "prompt_sum": t.get("prompt_sum", 0),
+                         "completion_sum": t.get("completion_sum", 0)}
+    return out
 
 
 def main() -> int:
@@ -240,28 +246,32 @@ def main() -> int:
         f" → {'PASS' if ok_q2 else 'FAIL'}")
 
     # ---- Q3 成本 ----
-    tin, tout = read_measured_tokens()
-    if tin == 0:
-        # 取不到实测就明确说没有，不用假设的 token 数
-        findings.append("Q3 成本：未找到实测 token（results/m1_gateway_live.json 与 "
-                        "m7_e2e.json 任一都要有 summary.tokens）→ SKIPPED "
-                        "不是 PASS；先跑 m1 --live 与 m7 再回来看")
-        out["cost"] = {"basis": None, "note": "无实测 token，拒绝编造"}
-        ok_q3 = None
+    measured = read_measured_tokens()
+    if not measured:
+        cost = {"basis": None, "note": "无可实测 token；拒绝编造"}
+        out["cost"] = cost
+        findings.append("Q3 成本推演：未找到实测 token（需先跑 m1 --live 与 m7）"
+                        "→ SKIPPED（不是 PASS），拒绝用估计值外推")
     else:
-        cost = q3_cost(tin, tout, per_day=1_000)
+        cost = q3_cost(measured["m7_e2e.json"]["prompt_sum"],
+                       measured["m7_e2e.json"]["completion_sum"],
+                       per_day=1_000)
+        cost["basis"]["sources"] = measured
         out["cost"] = cost
         cheapest = min(cost["plans"], key=lambda r: r["monthly_usd"])
         dearest = max(cost["plans"], key=lambda r: r["monthly_usd"])
-        ok_q3 = cheapest["monthly_usd"] > 0 and \
-            cheapest["monthly_usd"] < dearest["monthly_usd"]
         findings.append(
-            f"Q3 成本推演（基于实测 {tin} in / {tout} out per req，1k 请求/天 × 30 天）："
-            f"最便宜 {cheapest['plan']} ${cheapest['monthly_usd']}/月、"
-            f"最贵 {dearest['plan']} ${dearest['monthly_usd']}/月 "
-            f"（差 {dearest['monthly_usd'] / cheapest['monthly_usd']:.1f}×），"
-            f"本机执行同用量现金成本 $0 → {'PASS' if ok_q3 else 'FAIL'}。"
-            f"注意这是「同样用量上云」的对照，不是本机花费。")
+            "Q3 成本推演：全部用 results/m7_e2e.json 的实测 token（10 个工单，"
+            "prompt_sum=%d / completion_sum=%d），1k 请求/天×30 天 → "
+            "最便宜 %s $%.2f/月、最贵 %s $%.2f/月（差 %.1f×）；"
+            "本机执行同用量现金成本 $0。"
+            "注意：这是「同样用量上云」的对照，不是本机花费。"
+            % (measured["m7_e2e.json"]["prompt_sum"],
+               measured["m7_e2e.json"]["completion_sum"],
+               cheapest["plan"], cheapest["monthly_usd"],
+               dearest["plan"], dearest["monthly_usd"],
+               dearest["monthly_usd"] / cheapest["monthly_usd"]))
+
 
     passed = [f for f in findings if "PASS" in f]
     skipped = [f for f in findings if "SKIPPED" in f]

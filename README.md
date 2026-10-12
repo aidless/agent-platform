@@ -28,10 +28,23 @@ README 这里只转述结论，不复述全部细节。
 2. **M4b 把 README 里声明的「不是 OS 隔离」补成真 OS 隔离**（`python:3.12-slim` + 8 条攻击用例），其中"无残留容器"一条抓出了我自己的真 bug（`docker kill` 异步导致残留）。
 3. **M3b/M6-v2 把另两条已声明边界也补了**。
 
-## 复现（四条命令，全离线）
+## 复现（一条命令，全部离线）
 
 ```bash
 cd agent-platform
+make help           # 列出所有命令 + 自动发现的模块清单
+make deps           # 依赖可用性自检（缺 docker/ollama 只影响对应模块）
+make smoke-offline  # CI 同款：只跑不依赖外部服务的模块（10 个里的 9 个）
+make gates          # 上面 + 静态检查（编译 / 绝对路径 / 结果契约）+ 证据扫描
+make smoke          # 含需要 docker 的 M6，本地全量
+```
+
+模块**不写死**在 Makefile 里——用 `$(wildcard src/m[0-9]*.py)` 发现，
+新增 `src/m9_*.py` 后自动纳入。`tools/deps_check.py` 可单独跑。
+
+想逐个手跑（结果与上面等价）：
+
+```bash
 python3 src/m1_gateway.py --smoke        # 幂等/记账/降级/熔断/模型解析/静默失败
 python3 src/m2_observability.py --smoke   # 合成 40 请求，验证指标口径
 python3 src/m3_context_compact.py --smoke # 5 种压缩策略 + 负例基准
@@ -200,6 +213,11 @@ src/m4_tool_sandbox.py     M4 入口
 src/m5_resilience.py       M5 入口
 src/m6_etl.py              M6 入口（--drift 制造真漂移）
 results/*.json             每个模块的 findings + refutes
+Makefile                   help/smoke/smoke-offline/gates/scan/deps/clean（模块自动发现）
+tools/evidence_scan.py     跨仓「无证据数字」扫描（--selftest 可自证检测器活着）
+tools/deps_check.py        依赖可用性只读探测，不安装不联网
+docs/engineering.md        门禁为什么长这样 / 口径 / 边界 / 陌生人复现顺序
+.github/workflows/gates.yml CI 只跑离线档（理由见文件头注释与 engineering.md 第 3 节）
 ```
 
 License: MIT。
