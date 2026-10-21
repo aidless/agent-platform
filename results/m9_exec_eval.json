@@ -1,0 +1,75 @@
+{
+  "milestone": "M9",
+  "mode": "offline（ScriptedAgent 确定性动作序列，零 LLM 调用）",
+  "generated_at": 1792146695680,
+  "reference_implementation": {
+    "name": "SWE-agent/mini-swe-agent",
+    "version": "v2",
+    "license": "MIT",
+    "verified": "2026-10-12 git ls-remote HEAD=04d809ceab9df28f9adaed044884180159172930",
+    "relation": "契约参照（system/instance template、step=execute(query)、COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT 提交协议、step_limit/cost_limit/wall_time 三上界），非 import 依赖"
+  },
+  "findings": [
+    "E1 execution-based 判定：5 题中 5 题由 verify 退出码判对（[('T01', True), ('T02', True), ('T03', True), ('T04', True), ('T05', True)]）→ PASS。这是第一个 execution-based 评测。",
+    "E2 非空性反证：把 T02 的动作换成错误动作 → verify 判定 passed=False（要求 False）→ PASS。没有这条，E1 可能只是 verify 恒真。",
+    "E3 沙箱审计贯穿执行：6 条 tool_audit（含 0 条 denied），5 题共 6 个动作，要求每个动作恰好一条 audit → PASS",
+    "E4 记忆记账：5 条 memory_item（5 题各 1 条任务标记） → PASS"
+  ],
+  "refutes": [
+    "**脚本化 agent 不测模型能力**：动作序列是我手写的，所以本模块测的是harness、沙箱、判定链路是否自洽，不是模型会不会解题。",
+    "**5 题全部来自我手写**，没有用 SWE-bench 的真实 issue；样本量与任务多样性都不足以支撑任何「模型能力」结论。",
+    "**verify 命令仍由我选型**：E3 证明了改 verify 就能改结论，所以「execution-based 更可信」只对「选定 verify 之后」成立；verify 本身的公正性没有可复现的标准——这正是我 paper_workflow_kb 里那个 8.66% 翻转问题的残余风险，此处不做「已解决」的宣称。",
+    "**本地 bash 执行未隔离**：M4b 的 OS 级隔离在本模块未启用，动作直接跑在本机 tmpdir。生产环境必须接 M4b。",
+    "**没有接 LLM**：--live 路径未实现，本机显存被别的训练任务占满（2026-10-12 实测）也不是理由——接口未写就是不未实现。",
+    "**E3 的断言我写错过一次**：初版按「每题 2 个动作」算成 >=10，而实际 5 题共 6 个动作 → FAIL。修的是断言口径不是实现（实现本来是对的）。这是本轮第三次同类错误：benchmark 的**判据**比实现更容易出错，因为没人复核判据。"
+  ],
+  "results": {
+    "tasks": [
+      {
+        "tid": "T01",
+        "title": "创建并写入文件",
+        "steps": 1,
+        "passed": true,
+        "verify_cmd": "test -f hello.txt && grep -q 'hello world' hello.txt"
+      },
+      {
+        "tid": "T02",
+        "title": "排序去重",
+        "steps": 1,
+        "passed": true,
+        "verify_cmd": "test -f sorted.txt && diff <(sort -u nums.txt) sorted.txt"
+      },
+      {
+        "tid": "T03",
+        "title": "统计行数",
+        "steps": 1,
+        "passed": true,
+        "verify_cmd": "test \"$(cat count.txt)\" = \"3\""
+      },
+      {
+        "tid": "T04",
+        "title": "字符串反转",
+        "steps": 1,
+        "passed": true,
+        "verify_cmd": "test \"$(cat rev.txt)\" = \"fedcba\""
+      },
+      {
+        "tid": "T05",
+        "title": "多步组合（需要两步）",
+        "steps": 2,
+        "passed": true,
+        "verify_cmd": "test \"$(cat result.txt)\" = \"6\""
+      }
+    ],
+    "negative_baseline": {
+      "tid": "T02",
+      "wrong_action": "echo '我不确定怎么做'",
+      "passed": false
+    },
+    "audit": {
+      "rows": 6,
+      "denied": 0
+    },
+    "memory_items": 5
+  }
+}
