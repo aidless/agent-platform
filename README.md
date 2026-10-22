@@ -1,6 +1,6 @@
 # agent-platform
 
-企业 LLM 平台的六个最小可运行模块。**零第三方依赖**：核心只用 Python 3.10+
+企业 LLM 平台的十一个最小可运行模块。**零第三方依赖**：核心只用 Python 3.10+
 标准库 + SQLite；唯一的外部依赖是 M6 数据管道，它用 Docker 里的 PostgreSQL
 作为真实上游（不用 `psycopg2`，靠 `psql` + `\copy` CSV 管道）。
 
@@ -22,6 +22,7 @@ README 这里只转述结论，不复述全部细节。
 | M6 数据管道 | 契约/漂移/指纹覆盖度/确定性/慢查询/质量 7 项 PASS | `results/m6_etl.json`, `m6_etl_drift.json` |
 | **M7 端到端** | 六模块串联跑通 10 张工单：压缩省 48%、pinned 10/10、失败分类 1 个、M4 判定 {ok:5, denied:1} | `results/m7_e2e.json` |
 | **M8 成本与规模** | 三档索引全部 SCAN→USING INDEX，加速比随运行在 **3.7–7.5 / 17–21 / 38–47×** 之间（描述计划变化，不报单一倍数）；云成本 $5.81–49.03/月 | `results/m8_scale.json` |
+| **M9 execution-based 评测** | 5 题由 verify 退出码判对 + 错误动作必须判 False；脚本化 agent，测 harness/沙箱/判定链路，不测模型能力 | `results/m9_exec_eval.json` |
 
 加分项不是「又加了一个模块」，而是三件事：
 1. **M7 把六个孤立模块串成了一条真链路**（客服工单问答），端到端口径与单点口径的差异自己暴露出来。
@@ -47,7 +48,7 @@ make demo-test                          # Demo 契约测试
 cd agent-platform
 make help           # 列出所有命令 + 自动发现的模块清单
 make deps           # 依赖可用性自检（缺 docker/ollama 只影响对应模块）
-make smoke-offline  # CI 同款：只跑不依赖外部服务的模块（10 个里的 9 个）
+make smoke-offline  # CI 同款：只跑不依赖外部服务的模块（11 个里的 10 个）
 make gates          # 上面 + 静态检查（编译 / 绝对路径 / 结果契约）+ 证据扫描
 make smoke          # 含需要 docker 的 M6，本地全量
 ```
@@ -83,7 +84,7 @@ M1 的 live 模式要单独跑，且每次用干净 db（复用旧库会让幂�
 python3 src/m1_gateway.py --live    # 需要 ollama serve 在 127.0.0.1:11434
 ```
 
-## 六个模块各自证明了什么
+## 核心模块各自证明了什么
 
 ### M1 网关：`src/aplat/gateway.py`
 

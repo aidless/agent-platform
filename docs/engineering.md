@@ -99,7 +99,7 @@ Python import 表。后果：`import docker`（Python SDK，本仓用不到）�
 
 ```bash
 git clone <repo> && cd agent-platform
-make smoke-offline     # 10 个模块里 9 个能跑，约 3-5 分钟
+make smoke-offline     # 11 个模块里 10 个能跑，约 3-5 分钟
 # 想看 LLM 摘要（M3b）：需要能用的 ollama 与显存
 # 想看 OS 隔离（M4b）/ 数据管道（M6）：需要 docker
 ```
