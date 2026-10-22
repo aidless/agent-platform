@@ -2,18 +2,12 @@
   "meta": {
     "repo": "agent-platform",
     "demo": "module-evidence",
-    "commit": "9354983",
+    "commit": "3c0ce8f",
     "worktree_dirty": true,
     "dirty_paths": [
-      "demo/build_static.py",
-      "demo/public/app.js",
-      "demo/public/index.html",
-      "demo/public/runs.json",
-      "demo/public/style.css",
-      "demo/server.py",
-      "demo/modules_adapter.py"
+      "demo/public/runs.json"
     ],
-    "generated_at": "2026-10-22T07:45:37+00:00",
+    "generated_at": "2026-10-22T07:47:11+00:00",
     "mode": "result-replay",
     "python": "3.12.3",
     "note": "M1–M9 结果回放：results/ 是本地生成物、不入库；公开页回放已提交的 modules.json。"
