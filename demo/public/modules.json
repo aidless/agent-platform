@@ -2,12 +2,10 @@
   "meta": {
     "repo": "agent-platform",
     "demo": "module-evidence",
-    "commit": "a49b729",
-    "worktree_dirty": true,
-    "dirty_paths": [
-      "demo/modules_adapter.py"
-    ],
-    "generated_at": "2026-10-22T07:47:19+00:00",
+    "commit": "e993d31",
+    "worktree_dirty": false,
+    "dirty_paths": [],
+    "generated_at": "2026-10-22T07:47:24+00:00",
     "mode": "result-replay",
     "python": "3.12.3",
     "note": "M1–M9 结果回放：results/ 是本地生成物、不入库；公开页回放已提交的 modules.json。"
