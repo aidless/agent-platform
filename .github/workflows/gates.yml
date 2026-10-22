@@ -20,13 +20,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: deps (none required)
         run: python3 -c "import sys; print(sys.version)"
 
       - name: make smoke-offline
         run: make smoke-offline
+
+      - name: demo contract tests
+        run: python3 -m unittest demo/test_demo.py -v
 
       - name: static checks
         run: |
