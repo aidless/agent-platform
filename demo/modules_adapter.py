@@ -88,7 +88,8 @@ def _git_snapshot() -> tuple[str, bool, list[str]]:
             ["git", "status", "--porcelain"],
             cwd=ROOT, text=True, stderr=subprocess.DEVNULL,
         ).splitlines()
-        ignored = ("results/", "demo/public/modules.json")
+        ignored = ("results/", "demo/public/modules.json",
+                   "demo/public/runs.json")
         dirty_paths = [
             line[3:] for line in raw
             if len(line) > 3 and not line[3:].startswith(ignored)
