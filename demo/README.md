@@ -28,12 +28,13 @@ python3 demo/server.py                 # http://127.0.0.1:8000/
 静态回放不需要后端：
 
 ```bash
-python3 demo/build_static.py           # 写 demo/public/runs.json
+python3 demo/build_static.py           # 写 demo/public/runs.json + modules.json
 python3 -m http.server -d demo/public   # 任意静态服务器
 ```
 
 构建脚本会把当前 `results/m7_e2e.json` 与本次运行做 36 项对账；
 对不上会以非零退出码结束，不会静默生成一份“看起来对”的页面。
+`modules.json` 是 M1–M9 的冻结回放：本地 `results/` 不入库，公开页展示已提交的这份回放。
 
 ## 测试
 
@@ -58,6 +59,9 @@ python3 -m unittest demo/test_demo.py -v
 3. **中间时间线**：每一步都有状态、数值和来源。点 T05 看白名单真的拦住了 `issue_refund`；点 T04 看 HTTP 200 但回答为空如何被分类。
 4. **右侧证据**：每个数值对应的 SQLite 表/字段；点“查看本条原始 JSON”可以看到完整 payload。
 5. **底部**：M7 自己声明的 `refutes`，说明这个 Demo 不能证明什么。
+6. **M1–M9 模块证据**：11 个模块的 findings/refutes 回放；状态按每条断言末尾的
+   `PASS`/`FAIL` 与“预期失败/负例基准”标记计数，不按子串。
+   当前回放是 65 PASS、2 条预期失败、7 条说明行、0 条未预期失败。
 
 ## 三分钟面试讲法
 
@@ -80,14 +84,16 @@ python3 -m unittest demo/test_demo.py -v
 ```text
 demo/
 ├── pipeline_adapter.py   # 跑 M7、读 SQLite、生成 UI payload
-├── build_static.py       # 生成 public/runs.json
-├── server.py             # stdlib HTTP，静态页 + /api/run
+├── modules_adapter.py    # 读 results/*.json，生成 M1–M9 证据回放
+├── build_static.py       # 生成 public/runs.json + modules.json
+├── server.py             # stdlib HTTP，静态页 + /api/run + /api/modules/run
 ├── public/
 │   ├── index.html
 │   ├── app.js
 │   ├── style.css
 │   ├── config.json       # 静态模式
-│   └── runs.json         # 提交进仓库的构建产物
+│   ├── runs.json         # M7 构建产物
+│   └── modules.json      # M1–M9 回放产物
 ├── test_demo.py
 └── README.md
 ```

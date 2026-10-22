@@ -63,6 +63,20 @@
       </aside>
     </main>
 
+    <section class="panel modules-panel" id="modules-panel" aria-labelledby="modules-title">
+      <div class="panel-heading">
+        <h2 id="modules-title">M1–M9 模块证据</h2>
+        <div class="module-actions">
+          <span id="module-summary" class="muted">正在读取模块回放…</span>
+          <a class="button button-ghost" href="./modules.json" target="_blank" rel="noreferrer">modules.json</a>
+          <button id="modules-rerun" class="button button-ghost" type="button" disabled>重跑模块证据</button>
+        </div>
+      </div>
+      <p class="muted">findings / refutes 来自本地 <code>results/*.json</code> 的回放；M7 的详细链路在上面。</p>
+      <div id="module-grid" class="module-grid"></div>
+      <p id="module-error" class="muted" hidden></p>
+    </section>
+
     <section class="panel boundaries" aria-labelledby="boundaries-title">
       <div class="panel-heading">
         <h2 id="boundaries-title">这个 Demo 不证明什么</h2>

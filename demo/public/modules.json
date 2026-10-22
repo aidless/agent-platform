@@ -1,0 +1,466 @@
+{
+  "meta": {
+    "repo": "agent-platform",
+    "demo": "module-evidence",
+    "commit": "9354983",
+    "worktree_dirty": true,
+    "dirty_paths": [
+      "demo/build_static.py",
+      "demo/public/app.js",
+      "demo/public/index.html",
+      "demo/public/runs.json",
+      "demo/public/style.css",
+      "demo/server.py",
+      "demo/modules_adapter.py"
+    ],
+    "generated_at": "2026-10-22T07:45:37+00:00",
+    "mode": "result-replay",
+    "python": "3.12.3",
+    "note": "M1–M9 结果回放：results/ 是本地生成物、不入库；公开页回放已提交的 modules.json。"
+  },
+  "summary": {
+    "modules": 11,
+    "pass": 11,
+    "fail": 0,
+    "no_findings": 0,
+    "not_available": 0,
+    "passed_assertions": 65,
+    "expected_fail_assertions": 2,
+    "failed_assertions": 0,
+    "info_assertions": 7
+  },
+  "modules": [
+    {
+      "id": "M1",
+      "title": "LLM 网关",
+      "status": "PASS",
+      "passed": 5,
+      "failed": 0,
+      "expected_fail": 0,
+      "info": 1,
+      "findings": [
+        "幂等重放：首条 ok / 重放 cached，重放 token=0 成本=$0.000000（期望 0）→ PASS",
+        "模型解析：请求 model=llama3.2:3b（route primary=qwen3:8b 的 fallback），实际使用=llama3.2:3b → PASS。修前该字段被无声丢弃（live 实测：curl 请求 3b、服务用了 8b）。",
+        "静默失败检测：thinking 型模型的空 content 被标记为 status=empty / error_kind=empty_content / done_reason=length / thinking≈121 tokens → PASS。修前会被记成 status=ok（live 实测：qwen3:8b 空回答 29.5s）",
+        "记账：3 行，合计 21 tokens、$0.000000（本机模型单价 0，外部价仅作对照口径）",
+        "降级：timeout 时降级到 fallback，仍失败 → status=error http=502 degraded=True → PASS",
+        "熔断：阈值 3，5 次请求实际打到上游 3 次（期望 3，其余被 circuit_open 拦截）→ PASS；当前状态 open"
+      ],
+      "refutes": [
+        "本机模型单价记为 0，因此 cost_usd 全 0 是记账口径而非缺陷；外部模型价（gpt-4o-mini 等）只用于对照，不发起调用。",
+        "--smoke 不打网络，验证的是控制流与记账，不验证真实延迟。真实延迟见 --live 的 p50/p95。"
+      ],
+      "sources": [
+        "results/m1_gateway.json"
+      ],
+      "available": true
+    },
+    {
+      "id": "M2",
+      "title": "可观测台",
+      "status": "PASS",
+      "passed": 4,
+      "failed": 0,
+      "expected_fail": 0,
+      "info": 0,
+      "findings": [
+        "span 覆盖：40 条 trace、80 个 cache/upstream span（要求每条 trace ≥2）→ PASS",
+        "口径自洽：upstream span max duration=644ms ≤ 请求 max latency=644ms → PASS",
+        "缓存记账：7 次命中，其中 tokens≠0 的 0 次（要求 0，否则「复用不花钱」是假话）→ PASS",
+        "失败率含静默失败：15.0% = error 2 + empty 4（合成注入 30% timeout + 8% 思考型空回答；empty 必须 >0 否则这条断言是空的） → PASS"
+      ],
+      "refutes": [
+        "合成延迟来自 random.Random(20261011).lognormvariate(5.6,0.45)，不代表任何真实模型性能；真实 latency 需 M1 --live 重启后补测。",
+        "n=40 时 p95 的 bootstrap 区间很宽，属描述统计，不能写成 SLO。",
+        "错误率 30% 是脚本注入的上游超时率，不是 ollama 的真实可用率。真实可用率需在 M1 --live 下用 n≥100 复测。"
+      ],
+      "sources": [
+        "results/m2_observability.json"
+      ],
+      "available": true
+    },
+    {
+      "id": "M3",
+      "title": "上下文压缩",
+      "status": "PASS",
+      "passed": 5,
+      "failed": 0,
+      "expected_fail": 2,
+      "info": 2,
+      "findings": [
+        "token 降幅：naive_sliding=69%、sliding=60%、summarize=21%、tag_filter=44%（最优 naive_sliding=69%）。基线 raw 为 0% 作对照。",
+        "关键约束保留[raw]：命中 2/2（[5, 9]），pinned 完整=True → PASS",
+        "关键约束保留[naive_sliding]：命中 1/2（[9]），pinned 完整=True → FAIL（负例基准，预期失败）",
+        "关键约束保留[sliding]：命中 2/2（[5, 9]），pinned 完整=True → PASS",
+        "关键约束保留[summarize]：命中 2/2（[5, 9]），pinned 完整=True → PASS",
+        "关键约束保留[tag_filter]：命中 2/2（[5, 9]），pinned 完整=True → PASS",
+        "naive_sliding 反例（预期失败）：只看最近 4 轮 → golden_recall=0.5、丢掉的约束轮=[5] → FAIL（符合预期：朴素滑窗会丢关键约束）。这正是 pinned 机制与生产 sliding_window 的区别。",
+        "pinned 增益：sliding(带pinned) golden_recall=1.0 vs naive=0.5 → PASS",
+        "策略取舍：naive 最省 token（69%）但丢约束；sliding 用 pinned 换回约束只多花 24 tokens；tag_filter 召回 7 轮（比 sliding 多 2 轮相关内容），代价是少省 17 个百分点的 token。没有哪个策略同时最优，所以默认取 sliding。"
+      ],
+      "refutes": [
+        "summarize 策略的摘要是确定性占位文本（首句截断），不是 LLM 生成的语义摘要；真实摘要质量需 --live 复测。",
+        "tag 匹配是关键词精确命中，不是语义检索；换个说法就召回不到，真实系统应替换成 embedding 召回，本仓未做。",
+        "样本是单个 12 轮会话，不是分布；token 降幅数字不能外推到长会话。",
+        "golden 只有 2 轮，golden_recall 的粒度是 0/0.5/1，没有统计意义。"
+      ],
+      "sources": [
+        "results/m3_context_compact.json"
+      ],
+      "available": true
+    },
+    {
+      "id": "M3b",
+      "title": "真 LLM 摘要",
+      "status": "PASS",
+      "passed": 4,
+      "failed": 0,
+      "expected_fail": 0,
+      "info": 0,
+      "findings": [
+        "G1a 占位摘要的保真缺口（负例基准）：命中 []、丢失 ['无纺布', '周三下午']，要求至少丢 1 个 → PASS。这就是 README 说「摘要不是 LLM 摘要」的具体含义。",
+        "G1b 摘要器保真：命中 ['无纺布', '周三下午']、丢失 []（离线假摘要） → PASS",
+        "G2 代价：raw 215 tokens → 摘要器 69 tokens（省 68%）；占位摘要 224 tokens（比 raw 还胖，首句拼接不做归纳）= 只截断不归纳的实证。要求摘要器 ≥30% 且不高于占位版 → PASS",
+        "G3 离线确定性：mode=smoke(fake)，离线模式为同输入同输出 → PASS（保证 clone 后不联网可复现）"
+      ],
+      "refutes": [
+        "本模式的「LLM 摘要」是假上游，只验证控制流与指标口径，不说明真模型摘要质量。",
+        "golden 命中是词面包含（substring），不是语义等价。",
+        "样本是单个 6 轮会话，不能外推。"
+      ],
+      "sources": [
+        "results/m3b_llm_summary.json"
+      ],
+      "available": true
+    },
+    {
+      "id": "M4",
+      "title": "工具沙箱",
+      "status": "PASS",
+      "passed": 8,
+      "failed": 0,
+      "expected_fail": 0,
+      "info": 0,
+      "findings": [
+        "P1 白名单：4 次调用（3 个越权 + 1 个合法），被拒 3 次，合法调用 verdict=allowed → PASS",
+        "P1b 合法执行：白名单内工具执行一次返回 audit=ok（allowed 但未执行时应为 skipped，这里要 ok）→ PASS",
+        "P2a 审计（白名单阶段）：共 5 行 {'allowed': 2, 'denied': 3}（4 次判定 + 1 次合法执行）；越权 attempt 集合=[1]（应为 [1]） → PASS",
+        "P3a 可恢复：第 1、2 次抛 transient，第 3 次成功，实际调用 3 次 → PASS",
+        "P3b 不重试：ValueError 被判定不可重试，实际调用 1 次（要求 1）→ PASS",
+        "P3c 死信：连续 503 重试 5 次后进死信，实际调用 5 次、死信 1 条（attempts=5） → PASS",
+        "P2b 审计（全量）：共 14 行 {'allowed': 10, 'denied': 4}，期望 14 行（4 判定 + 1 执行 + flaky 2错1对 + fatal 1错 + 死信 5错） → PASS",
+        "P4 退避：4 次尝试间 3 次 sleep=[0.01, 0.02, 0.02]（确定性无 jitter，总墙钟 0ms）→ PASS"
+      ],
+      "refutes": [
+        "沙箱是进程内白名单 + 参数校验，不是 OS 级隔离；真实沙箱应用 seccomp/容器/独立用户，本仓未实现，因此 rm_rf/net.fetch 的拒绝只是策略层，不是安全边界。",
+        "「重试后可恢复」用的是本地假上游，不证明对真实 503 有效。",
+        "tool_audit 是单表 append-only，没有做防篡改哈希链；只做到可查，没做到不可抵赖。"
+      ],
+      "sources": [
+        "results/m4_tool_sandbox.json"
+      ],
+      "available": true
+    },
+    {
+      "id": "M4b",
+      "title": "OS 级隔离",
+      "status": "PASS",
+      "passed": 9,
+      "failed": 0,
+      "expected_fail": 0,
+      "info": 0,
+      "findings": [
+        "I0 非空性对照：良性计算 6*7 在容器里执行，stdout='42'、exit=0 → PASS（这条保证了下面七条不是因为容器没起来而「假通过」）",
+        "I1 网络隔离（--network none）：容器内连 1.1.1.1:53 → 'BLOCKED OSError' → PASS",
+        "I2 文件系统只读（--read-only）：写 /etc/evil → 'BLOCKED OSError' → PASS",
+        "I3 非 root（--user 65534:65534）：容器内 uid=65534 → PASS",
+        "I4 权限收敛（--cap-drop ALL）：/proc/self/status CapEff=0000000000000000（全 0 才通过）→ PASS",
+        "I5 内存上限（--memory 64m）：申请 300MiB → exit=137 oom=True out='' → PASS",
+        "I6 进程数上限（--pids-limit 32）：fork 200 次 → exit=0 out='BLOCKED BlockingIOError 31' → PASS",
+        "I7 时间上限（外部 timeout=8s + docker rm -f）：死循环 → timed_out=True，用时 8230ms → PASS",
+        "无残留容器：超时路径 kill 后 docker ps -a 里 aplat-sbx-* 数量=0 [] → PASS"
+      ],
+      "refutes": [
+        "本层只隔离「代码执行」；容器逃逸、内核漏洞不在覆盖范围内（那需要 gVisor/Kata/seccomp 白名单与内核补丁）。",
+        "I6 的 fork 炸弹判据是「被限流或容器死亡」，没有精确核对 pids-limit=32 的边界值。",
+        "I5 只证明 300MiB 申请失败，没有测 cgroup 边界的精确阈值。",
+        "tmpfs 的 size=8m 未单独攻击（只验了根文件系统只读）。",
+        "容器启动本身有秒级开销，本层不适合高频小工具调用；生产上应是「热池 + 池内复用」而非每次 docker run。"
+      ],
+      "sources": [
+        "results/m4b_os_sandbox.json"
+      ],
+      "available": true
+    },
+    {
+      "id": "M5",
+      "title": "韧性层",
+      "status": "PASS",
+      "passed": 7,
+      "failed": 0,
+      "expected_fail": 0,
+      "info": 0,
+      "findings": [
+        "A1a 指数退避（jitter=False）：[0.1, 0.2, 0.4, 0.8, 1.0] 期望 [0.1, 0.2, 0.4, 0.8, 1.0] → PASS",
+        "A1b full jitter 上界：[0.032, 0.03, 0.26, 0.057, 0.535] 全部落在各自上界内且非全零 → PASS",
+        "A2 4xx 不熔断：连续 10 次 http_4xx 后 fails=0、state=closed（应为 0/closed）→ PASS",
+        "A3 熔断打开：3 次 5xx 后 state 序列=[('after_fail1', 'closed'), ('after_fail2', 'closed'), ('after_fail3', 'open'), ('open_allow', False)]（open 后 allow 必须 False）→ PASS",
+        "A4 half_open 探测：cooldown 到期后第一次 allow=True（放行探测），第二次 allow=False（同批请求其余拦住）→ PASS",
+        "A5 降级生效：primary 抛错时链路选择 fallback、返回 'fallback-result' → PASS",
+        "A6 全空降级：primary/fallback 都返回空 → raised 'all degraded options exhausted: empty re'（必须显式报错，不能静默返回空）→ PASS"
+      ],
+      "refutes": [
+        "退避序列用 seed=7 的确定性 jitter，只证明实现符合 full jitter 定义，不证明该参数在真实租户冲突下最优。",
+        "cooldown 用 0 / 1e9 两个极值验证状态迁移，真实 cooldown 的选择需要按上游恢复时间调，本仓给不出建议值。",
+        "half_open 单探测是进程内计数的，多副本部署时每个副本各放一个，不能替代分布式信号量。"
+      ],
+      "sources": [
+        "results/m5_resilience.json"
+      ],
+      "available": true
+    },
+    {
+      "id": "M6",
+      "title": "数据管道",
+      "status": "PASS",
+      "passed": 10,
+      "failed": 0,
+      "expected_fail": 0,
+      "info": 3,
+      "findings": [
+        "D1 schema 契约：6 列，缺 []、多 []、类型一致=True，指纹=a01c3dece9a4e5c8 → PASS",
+        "D2 漂移门禁：指纹未变（a01c3dece9a4e5c8）（指纹变化则记 etl_schema_version 并拒同步） → PASS",
+        "D2b 指纹覆盖度（加索引，列名类型全不变）：v1 指纹 a01c3dece9a4e5c8→a01c3dece9a4e5c8（漏报）；v2 指纹 3dca006af3b2c5bc→5bbf2edc2ba35310（抓到）；删索引后 v2 回到原值=True → PASS。v1 的漏报是本仓已声明的边界，这条断言把它变成了可观测的事实。",
+        "同步：上游 2000 行 → SQLite 2000 行，列 ['order_id', 'customer_id', 'status', 'amount_cents', 'created_at', 'updated_at'] → PASS",
+        "D3 确定性：两次入库的 SQLite 文件 sha256 相同（3aec597facb4c9ad…） → PASS",
+        "D4 慢查询：无索引计划=「SCAN etl_orders」→ 加 ix_etl_cust 后=「SEARCH etl_orders USING INDEX ix_etl_cust (customer_id=?)」，命中 12 行 → PASS",
+        "D5 质量门禁：2000 行，主键空值 0、重复主键 0、负金额 0（三项全 0 才放行）→ PASS",
+        "D1 schema 契约：6 列，缺 []、多 []、类型一致=True，指纹=a01c3dece9a4e5c8 → PASS",
+        "D2 漂移门禁：指纹 a01c3dece9a4e5c8→80921e0fb2151b77（指纹变化则记 etl_schema_version 并拒同步） → PASS",
+        "同步：检测到 schema 漂移，按门禁规则拒绝同步，未写入任何一行 → PASS",
+        "D3：无同步数据（被漂移门禁拦截） → SKIPPED（不是 PASS）",
+        "D4：无同步数据（被漂移门禁拦截） → SKIPPED（不是 PASS）",
+        "D5：无同步数据（被漂移门禁拦截） → SKIPPED（不是 PASS）"
+      ],
+      "refutes": [
+        "aplat_etl 是本次新建的独立库，不碰已有的 aihot 数据；但 Docker exec 仍需宿主机 docker 权限，不是纯本地。",
+        "同步用 psql \\copy 的 CSV 管道，未处理 NULL 语义转换与二进制列；生产管道应换 psycopg2 或 COPY TO STDOUT BINARY。",
+        "慢查询数据是 12k 行合成表，只能证明『索引改变查询计划』，给不出真实数据量下的绝对耗时。",
+        "schema 指纹只覆盖列名+类型，不覆盖约束、索引、默认值；上游加一条 CHECK 约束不会被本门禁发现。",
+        "aplat_etl 是本次新建的独立库，不碰已有的 aihot 数据。",
+        "漂移用例靠 ADD/DROP COLUMN 注入；已用 DROP 清理，但 ALTER 会让表短暂不可用，生产上应先在从库演练。",
+        "指纹只覆盖列名+类型，不覆盖约束/索引/默认值。"
+      ],
+      "sources": [
+        "results/m6_etl.json",
+        "results/m6_etl_drift.json"
+      ],
+      "available": true
+    },
+    {
+      "id": "M7",
+      "title": "端到端工单链路",
+      "status": "PASS",
+      "passed": 7,
+      "failed": 0,
+      "expected_fail": 0,
+      "info": 0,
+      "findings": [
+        "M3 压缩在链路里真的省了 token：1181 → 620（省 561，平均 48%） → PASS",
+        "pinned 约束：10 条（10 个工单各 1 条合规约束），压缩后仍在上下文里 → PASS",
+        "M2 可观测贯穿链路：10 条 trace / 10 次网关调用 / 6 条工具审计 → PASS",
+        "失败分类完备性：1 个失败工单，分类={'silent_empty_answer': 1}，未分类 0 → PASS",
+        "端到端口径 ⊇ 网关口径：端到端失败 1 ≥ 网关失败 1（端到端把工具失败也算进去，所以不会更少） → PASS",
+        "M4 沙箱在链路里真实参与（含非空性）：工具判定分布={'denied': 1, 'ok': 5}，要求同时出现 ok 与被拒 → PASS",
+        "被拒工具后的降级回答：1 个工单工具被拒，全部带 answered_without_tool_data 标记=[['tool_denied', 'answered_without_tool_data']] → PASS"
+      ],
+      "refutes": [
+        "工单只有 10 条、且是手写的，不是真实客服流量分布；端到端 p95 是描述统计，不构成 SLO。",
+        "离线模式的失败率（timeout 5% + 空回答 5%）是**脚本注入**的，不是 ollama 的真实可用率。",
+        "工具只做 order_id 精确查询，没有模糊匹配/多轮澄清；真实客服场景里「查不到」的比例会高得多。",
+        "没有用户侧反馈回路（工单是否解决），所以「成功」定义是「模型返回了非空内容」，不等于用户满意。",
+        "M6 的订单库是合成 2000 行，不是真实交易数据。"
+      ],
+      "sources": [
+        "results/m7_e2e.json"
+      ],
+      "available": true
+    },
+    {
+      "id": "M8",
+      "title": "成本与规模",
+      "status": "PASS",
+      "passed": 2,
+      "failed": 0,
+      "expected_fail": 0,
+      "info": 1,
+      "findings": [
+        "Q1 并发：24 请求，串行 vs 8 并发 → 串行 19.6 rps（p50=20.0ms），并发 40.8 rps（p50=20.0ms）；上游调用数 24→24（要求等于请求数，证明没有放大） → PASS",
+        "Q2 索引规模：1k/10k/100k 三档，无索引全为 SCAN（1000,10000,100000）；加 customer_id 索引后全部转 USING INDEX；三档加速 [7.18, 13.28, 36.92]（100k 档无索引 4.963ms → 有索引 0.134ms） → PASS",
+        "Q3 成本推演：全部用 results/m7_e2e.json 的实测 token（10 个工单，prompt_sum=1298 / completion_sum=149），1k 请求/天×30 天 → 最便宜 qwen-plus(阿里) $5.81/月、最贵 claude-3-5-haiku $49.03/月（差 8.4×）；本机执行同用量现金成本 $0。注意：这是「同样用量上云」的对照，不是本机花费。"
+      ],
+      "refutes": [
+        "Q1 的上游是 sleep(20ms) 的假桩，不是真模型延迟；它刻画的是「网关自身是否成为瓶颈」，不含网络往返与首 token 时间。",
+        "Q2 的三档行数（1k/10k/100k）是合成数据，SQLite 查询计划在真实数据分布（倾斜、热点 customer_id）下可能不同。",
+        "Q1 的 rps 与 Q2 的加速比**每次跑都不一样**（墙钟计时，受机器噪声与调度影响）。实测连跑三次：并发 rps 126.1/140.4/145.0，100k 档加速 38.81/41.62/40.53。加速比在 38×–47× 间浮动，1k 档最不稳（3.83→7.51，因为小表上 SCAN 本身就快）。所以这些数字是「数量级与计划变化」，不是可复现的精确倍数。",
+        "Q3 用 gpt-4o-mini / claude-haiku / qwen-plus 三个价目做区间，未含企业折扣、批处理折扣、上下文缓存折扣，会**高估**月成本。",
+        "Q3 的 token 用量取自本仓自己跑的两个模块，不是生产流量；客服场景会有长上下文，实际 in token 会显著更高。",
+        "本机现金成本记为 0，但没算电费、GPU 折旧与机时成本。"
+      ],
+      "sources": [
+        "results/m8_scale.json"
+      ],
+      "available": true
+    },
+    {
+      "id": "M9",
+      "title": "execution-based 评测",
+      "status": "PASS",
+      "passed": 4,
+      "failed": 0,
+      "expected_fail": 0,
+      "info": 0,
+      "findings": [
+        "E1 execution-based 判定：5 题中 5 题由 verify 退出码判对（[('T01', True), ('T02', True), ('T03', True), ('T04', True), ('T05', True)]）→ PASS。这是第一个 execution-based 评测。",
+        "E2 非空性反证：把 T02 的动作换成错误动作 → verify 判定 passed=False（要求 False）→ PASS。没有这条，E1 可能只是 verify 恒真。",
+        "E3 沙箱审计贯穿执行：6 条 tool_audit（含 0 条 denied），5 题共 6 个动作，要求每个动作恰好一条 audit → PASS",
+        "E4 记忆记账：5 条 memory_item（5 题各 1 条任务标记） → PASS"
+      ],
+      "refutes": [
+        "**脚本化 agent 不测模型能力**：动作序列是我手写的，所以本模块测的是harness、沙箱、判定链路是否自洽，不是模型会不会解题。",
+        "**5 题全部来自我手写**，没有用 SWE-bench 的真实 issue；样本量与任务多样性都不足以支撑任何「模型能力」结论。",
+        "**verify 命令仍由我选型**：E3 证明了改 verify 就能改结论，所以「execution-based 更可信」只对「选定 verify 之后」成立；verify 本身的公正性没有可复现的标准——这正是我 paper_workflow_kb 里那个 8.66% 翻转问题的残余风险，此处不做「已解决」的宣称。",
+        "**本地 bash 执行未隔离**：M4b 的 OS 级隔离在本模块未启用，动作直接跑在本机 tmpdir。生产环境必须接 M4b。",
+        "**没有接 LLM**：--live 路径未实现，本机显存被别的训练任务占满（2026-10-12 实测）也不是理由——接口未写就是不未实现。",
+        "**E3 的断言我写错过一次**：初版按「每题 2 个动作」算成 >=10，而实际 5 题共 6 个动作 → FAIL。修的是断言口径不是实现（实现本来是对的）。这是本轮第三次同类错误：benchmark 的**判据**比实现更容易出错，因为没人复核判据。"
+      ],
+      "sources": [
+        "results/m9_exec_eval.json"
+      ],
+      "available": true
+    }
+  ],
+  "boundaries": [
+    "这些是本地 results/*.json 的回放，不是公开页实时重跑；M7 有一个独立的代码生成页。",
+    "findings/refutes 是各模块自己声明的断言与边界，不是外部审计结论。",
+    "M6 需要 Docker；M1/M3b 的 live 路径需要本机 ollama；本页不重跑它们。",
+    "11 个模块里有 10 个能离线跑（M6 除外）；这不等于 11 个都在生产环境验证过。"
+  ],
+  "verification": {
+    "status": "MATCH",
+    "checks": [
+      {
+        "module": "M1",
+        "sources": [
+          "results/m1_gateway.json"
+        ],
+        "present": [
+          "results/m1_gateway.json"
+        ],
+        "ok": true
+      },
+      {
+        "module": "M2",
+        "sources": [
+          "results/m2_observability.json"
+        ],
+        "present": [
+          "results/m2_observability.json"
+        ],
+        "ok": true
+      },
+      {
+        "module": "M3",
+        "sources": [
+          "results/m3_context_compact.json"
+        ],
+        "present": [
+          "results/m3_context_compact.json"
+        ],
+        "ok": true
+      },
+      {
+        "module": "M3b",
+        "sources": [
+          "results/m3b_llm_summary.json"
+        ],
+        "present": [
+          "results/m3b_llm_summary.json"
+        ],
+        "ok": true
+      },
+      {
+        "module": "M4",
+        "sources": [
+          "results/m4_tool_sandbox.json"
+        ],
+        "present": [
+          "results/m4_tool_sandbox.json"
+        ],
+        "ok": true
+      },
+      {
+        "module": "M4b",
+        "sources": [
+          "results/m4b_os_sandbox.json"
+        ],
+        "present": [
+          "results/m4b_os_sandbox.json"
+        ],
+        "ok": true
+      },
+      {
+        "module": "M5",
+        "sources": [
+          "results/m5_resilience.json"
+        ],
+        "present": [
+          "results/m5_resilience.json"
+        ],
+        "ok": true
+      },
+      {
+        "module": "M6",
+        "sources": [
+          "results/m6_etl.json",
+          "results/m6_etl_drift.json"
+        ],
+        "present": [
+          "results/m6_etl.json",
+          "results/m6_etl_drift.json"
+        ],
+        "ok": true
+      },
+      {
+        "module": "M7",
+        "sources": [
+          "results/m7_e2e.json"
+        ],
+        "present": [
+          "results/m7_e2e.json"
+        ],
+        "ok": true
+      },
+      {
+        "module": "M8",
+        "sources": [
+          "results/m8_scale.json"
+        ],
+        "present": [
+          "results/m8_scale.json"
+        ],
+        "ok": true
+      },
+      {
+        "module": "M9",
+        "sources": [
+          "results/m9_exec_eval.json"
+        ],
+        "present": [
+          "results/m9_exec_eval.json"
+        ],
+        "ok": true
+      }
+    ]
+  }
+}

@@ -22,9 +22,10 @@ if str(ROOT / "demo") not in sys.path:
     sys.path.insert(0, str(ROOT / "demo"))
 
 from pipeline_adapter import run_batch  # noqa: E402
+from modules_adapter import build_modules_payload  # noqa: E402
 
 PUBLIC = ROOT / "demo" / "public"
-_cache: dict[str, dict | None] = {"payload": None}
+_cache: dict[str, dict | None] = {"payload": None, "modules": None}
 _lock = threading.Lock()
 
 
@@ -33,6 +34,18 @@ def get_payload(force: bool = False) -> dict:
         if force or _cache["payload"] is None:
             _cache["payload"] = run_batch()
         return _cache["payload"]  # type: ignore[return-value]
+
+
+def get_modules(force: bool = False) -> dict:
+    with _lock:
+        if force or _cache["modules"] is None:
+            modules = build_modules_payload()
+            if modules["summary"]["not_available"] == modules["summary"]["modules"]:
+                artifact = PUBLIC / "modules.json"
+                if artifact.exists():
+                    modules = json.loads(artifact.read_text(encoding="utf-8"))
+            _cache["modules"] = modules
+        return _cache["modules"]  # type: ignore[return-value]
 
 
 class DemoHandler(SimpleHTTPRequestHandler):
@@ -67,6 +80,14 @@ class DemoHandler(SimpleHTTPRequestHandler):
         if path == "/api/runs":
             self._payload()
             return
+        if path in ("/api/modules", "/modules.json"):
+            try:
+                modules = get_modules()
+            except Exception as exc:  # noqa: BLE001
+                self._json(500, {"error": type(exc).__name__, "detail": str(exc)})
+                return
+            self._json(200, modules)
+            return
         if path == "/config.json":
             self._json(200, {
                 "mode": "live",
@@ -80,6 +101,15 @@ class DemoHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = self.path.split("?", 1)[0]
+        if path == "/api/modules/run":
+            try:
+                modules = get_modules(force=True)
+            except Exception as exc:  # noqa: BLE001
+                self._json(500, {"error": type(exc).__name__,
+                                 "detail": str(exc)})
+                return
+            self._json(200, modules)
+            return
         if path != "/api/run":
             self._json(404, {"error": "not found"})
             return

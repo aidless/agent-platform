@@ -35,6 +35,8 @@ README 这里只转述结论，不复述全部细节。
 
 `demo/` 把 M7 的离线链路做成一页可回放的证据面板：左侧选工单，中间看六步链路，
 右侧每个数字都能追到 SQLite 表/字段；本地模式可以现场重跑。
+`demo/public/modules.json` 另外回放 M1–M9 的 findings/refutes（11 个模块、65 条 PASS、
+2 条预期失败、0 条未预期失败），状态按每条断言末尾的标记解析。
 
 ```bash
 python3 demo/server.py                  # http://127.0.0.1:8000/

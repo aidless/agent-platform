@@ -5,6 +5,7 @@ const state = {
   selectedId: null,
   mode: "static",
   config: null,
+  modules: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -241,6 +242,100 @@ function renderEvidence(item) {
   root.append(table);
 }
 
+function moduleStatusClass(status) {
+  const value = String(status || "").toLowerCase();
+  if (value === "pass") return "module-status-ok";
+  if (value === "fail") return "module-status-bad";
+  if (value === "partial") return "module-status-warn";
+  return "module-status-neutral";
+}
+
+function renderModules(payload) {
+  state.modules = payload;
+  const summary = payload.summary || {};
+  $("module-summary").textContent =
+    `${summary.modules || 0} 个模块 · ` +
+    `${summary.passed_assertions || 0} PASS · ` +
+    `${summary.expected_fail_assertions || 0} 预期失败 · ` +
+    `${summary.failed_assertions || 0} 未预期失败 · ` +
+    `${summary.info_assertions || 0} 说明行`;
+  $("module-error").hidden = true;
+  const root = $("module-grid");
+  root.replaceChildren();
+  for (const module of payload.modules || []) {
+    const card = el("article", "module-card");
+    const head = el("div", "module-head");
+    head.append(el("span", "module-id", module.id));
+    head.append(el("h3", "module-title", module.title));
+    head.append(
+      el("span", `module-status ${moduleStatusClass(module.status)}`, module.status)
+    );
+    card.append(head);
+
+    const meta = el("div", "module-meta");
+    meta.append(el("span", "metric-chip", `${module.passed} PASS`));
+    if (module.expected_fail) {
+      meta.append(el("span", "metric-chip", `${module.expected_fail} 预期失败`));
+    }
+    if (module.failed) {
+      meta.append(el("span", "metric-chip metric-chip-bad", `${module.failed} 未预期失败`));
+    }
+    if (module.info) {
+      meta.append(el("span", "metric-chip", `${module.info} 说明行`));
+    }
+    card.append(meta);
+
+    const findings = el("div", "module-list");
+    findings.append(el("p", "module-list-title", "findings"));
+    const findingList = el("ul");
+    for (const item of (module.findings || []).slice(0, 2)) {
+      findingList.append(el("li", null, item));
+    }
+    if ((module.findings || []).length > 2) {
+      findingList.append(el("li", "muted", "更多见 modules.json"));
+    }
+    findings.append(findingList);
+    card.append(findings);
+
+    const refutes = el("div", "module-list");
+    refutes.append(el("p", "module-list-title", "refutes"));
+    const refuteList = el("ul");
+    for (const item of (module.refutes || []).slice(0, 1)) {
+      refuteList.append(el("li", null, item));
+    }
+    refutes.append(refuteList);
+    card.append(refutes);
+    card.append(el("p", "module-source", (module.sources || []).join(" + ")));
+    root.append(card);
+  }
+}
+
+async function rerunModules() {
+  const button = $("modules-rerun");
+  const summary = $("module-summary");
+  const previous = summary.textContent;
+  button.disabled = true;
+  summary.textContent = "正在重跑模块证据…";
+  try {
+    const response = await fetch("/api/modules/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    renderModules(payload);
+    summary.textContent += " · 已重跑";
+  } catch (error) {
+    summary.textContent = previous;
+    const box = $("module-error");
+    box.hidden = false;
+    box.textContent = `模块重跑失败：${error.message}`;
+  } finally {
+    button.disabled = state.mode !== "live";
+  }
+}
+
 function renderBoundaries(payload) {
   const root = $("boundaries");
   root.replaceChildren();
@@ -286,6 +381,8 @@ function renderMode() {
       ? "点击“重跑整批”会重新执行 M7 离线链路；数字随之更新。"
       : "这是提交进仓库的一次确定性离线运行。运行 python3 demo/server.py 可实时重算。";
   $("rerun").disabled = state.mode !== "live";
+  const modulesRerun = $("modules-rerun");
+  if (modulesRerun) modulesRerun.disabled = state.mode !== "live";
 }
 
 function renderAll() {
@@ -344,6 +441,7 @@ async function init() {
     renderAll();
 
     $("rerun").addEventListener("click", rerun);
+    $("modules-rerun").addEventListener("click", rerunModules);
     $("raw-toggle").addEventListener("click", () => {
       const pre = $("raw-json");
       const button = $("raw-toggle");
@@ -352,6 +450,19 @@ async function init() {
       button.setAttribute("aria-expanded", String(wasHidden));
       button.textContent = wasHidden ? "收起原始 JSON" : "查看本条原始 JSON";
     });
+
+    try {
+      const modulesResponse = await fetch("./modules.json", { cache: "no-store" });
+      if (!modulesResponse.ok) {
+        throw new Error(`modules.json HTTP ${modulesResponse.status}`);
+      }
+      renderModules(await modulesResponse.json());
+    } catch (error) {
+      $("module-summary").textContent = "模块回放不可用";
+      const moduleError = $("module-error");
+      moduleError.hidden = false;
+      moduleError.textContent = `模块回放加载失败：${error.message}`;
+    }
   } catch (error) {
     const box = $("error");
     box.hidden = false;

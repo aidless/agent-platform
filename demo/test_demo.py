@@ -23,8 +23,10 @@ if str(ROOT / "demo") not in sys.path:
 
 import server  # noqa: E402
 from pipeline_adapter import run_batch, write_payload  # noqa: E402
+from modules_adapter import build_modules_payload  # noqa: E402
 
 PUBLIC = ROOT / "demo" / "public"
+MODULES = PUBLIC / "modules.json"
 PUBLIC_FILES = [
     PUBLIC / "index.html",
     PUBLIC / "app.js",
@@ -158,6 +160,7 @@ class DemoGuardTest(unittest.TestCase):
     def test_no_secrets_or_absolute_paths(self) -> None:
         for path in PUBLIC_FILES + [
             ROOT / "demo" / "pipeline_adapter.py",
+            ROOT / "demo" / "modules_adapter.py",
             ROOT / "demo" / "build_static.py",
             ROOT / "demo" / "server.py",
         ]:
@@ -199,6 +202,51 @@ class DemoGuardTest(unittest.TestCase):
             self.assertIn("tool_verdict", item["sources"])
 
 
+class DemoModulesTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.modules = json.loads(MODULES.read_text(encoding="utf-8"))
+
+    def test_artifact_shape_and_expected_failures(self) -> None:
+        payload = self.modules
+        self.assertEqual(payload["summary"]["modules"], 11)
+        self.assertEqual(payload["summary"]["pass"], 11)
+        self.assertEqual(payload["summary"]["failed_assertions"], 0)
+        by_id = {module["id"]: module for module in payload["modules"]}
+        self.assertEqual(by_id["M3"]["status"], "PASS")
+        self.assertEqual(by_id["M3"]["expected_fail"], 2)
+        self.assertEqual(by_id["M3"]["failed"], 0)
+        self.assertEqual(by_id["M1"]["info"], 1)
+        self.assertEqual(by_id["M6"]["info"], 3)
+        for module in payload["modules"]:
+            self.assertTrue(module["findings"], module["id"])
+            self.assertTrue(module["refutes"], module["id"])
+            self.assertTrue(module["sources"], module["id"])
+
+    def test_fresh_build_matches_artifact_when_results_exist(self) -> None:
+        if not (ROOT / "results" / "m1_gateway.json").exists():
+            self.skipTest("results/ absent in a clean clone; artifact is the replay")
+        fresh = build_modules_payload(generated_at="2026-10-22T00:00:00+00:00")
+        artifact = json.loads(MODULES.read_text(encoding="utf-8"))
+
+        def normalize(payload: dict) -> dict:
+            data = json.loads(json.dumps(payload))
+            for key in ("generated_at", "commit", "worktree_dirty",
+                        "dirty_paths", "python"):
+                data["meta"].pop(key, None)
+            return data
+
+        self.assertEqual(normalize(fresh), normalize(artifact))
+
+    def test_modules_ui_contract(self) -> None:
+        html = (PUBLIC / "index.html").read_text(encoding="utf-8")
+        for element_id in ("module-grid", "module-summary", "modules-rerun"):
+            self.assertIn(f'id="{element_id}"', html, element_id)
+        script = (PUBLIC / "app.js").read_text(encoding="utf-8")
+        self.assertIn("renderModules", script)
+        self.assertIn("module-summary", script)
+
+
 class DemoServerTest(unittest.TestCase):
     def test_api_health_runs_and_live_rerun(self) -> None:
         httpd, port = server.make_server(port=0)
@@ -229,6 +277,21 @@ class DemoServerTest(unittest.TestCase):
                 rerun = json.load(response)
             self.assertEqual(rerun["summary"]["tickets"], 10)
             self.assertEqual(rerun["items"][0]["id"], "T00")
+
+            with urllib.request.urlopen(f"{base}/modules.json", timeout=60) as response:
+                modules = json.load(response)
+            self.assertEqual(modules["summary"]["modules"], 11)
+            self.assertEqual(modules["summary"]["pass"], 11)
+
+            modules_request = urllib.request.Request(
+                f"{base}/api/modules/run",
+                data=b"{}",
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(modules_request, timeout=60) as response:
+                modules_rerun = json.load(response)
+            self.assertEqual(modules_rerun["summary"]["modules"], 11)
         finally:
             httpd.shutdown()
             httpd.server_close()

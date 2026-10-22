@@ -483,3 +483,73 @@ h2 {
   .provenance dl { grid-template-columns: 1fr; }
   .panel { padding: 15px; }
 }
+
+/* ---------- module evidence console ---------- */
+.modules-panel { margin-top: 16px; }
+.module-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.module-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  background: #fbfcfd;
+  min-width: 0;
+}
+.module-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.module-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.module-title { margin: 0; font-size: 15px; flex: 1 1 auto; }
+.module-status {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.module-status-ok { background: var(--ok-soft); color: var(--ok); }
+.module-status-bad { background: var(--bad-soft); color: var(--bad); }
+.module-status-warn { background: var(--warn-soft); color: var(--warn); }
+.module-status-neutral { background: var(--neutral-soft); color: var(--muted); }
+.module-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.metric-chip-bad { background: var(--bad-soft); color: var(--bad); }
+.module-list { margin-top: 8px; }
+.module-list-title {
+  margin: 0 0 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.module-list ul { margin: 0; padding-left: 18px; font-size: 12px; color: var(--muted); }
+.module-list li { margin-bottom: 4px; overflow-wrap: anywhere; }
+.module-source {
+  margin: 10px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .module-grid { grid-template-columns: 1fr; }
+  .module-actions { justify-content: flex-start; }
+}
