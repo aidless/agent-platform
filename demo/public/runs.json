@@ -2,10 +2,10 @@
   "meta": {
     "repo": "agent-platform",
     "demo": "m7-ticket-pipeline",
-    "commit": "4ac13f2",
+    "commit": "d09d961",
     "worktree_dirty": false,
     "dirty_paths": [],
-    "generated_at": "2026-10-22T07:06:22+00:00",
+    "generated_at": "2026-10-22T07:07:17+00:00",
     "mode": "offline-scripted",
     "seed": 20261011,
     "model": "qwen3:8b",
@@ -21,12 +21,12 @@
       "silent_empty_answer": 1
     },
     "latency_ms": {
-      "p50": 34.0,
-      "p95": 44.5,
-      "max": 49,
+      "p50": 30.5,
+      "p95": 35.1,
+      "max": 36,
       "p50_ci95": [
-        32.0,
-        39.0
+        28.0,
+        32.5
       ]
     },
     "context_tokens": {
@@ -40,15 +40,15 @@
       "completion_sum": 149
     },
     "flags": {
+      "answered_without_tool_data": 1,
       "degraded": 1,
-      "tool_denied": 1,
       "empty_content": 1,
-      "answered_without_tool_data": 1
+      "tool_denied": 1
     },
     "pinned": 10,
     "tool_verdicts": {
-      "denied": 1,
-      "ok": 5
+      "ok": 5,
+      "denied": 1
     }
   },
   "items": [
@@ -61,7 +61,7 @@
       "llm_status": "ok",
       "answer": "您的订单已发货，仅向您核对后四位 0042。",
       "answer_len": 22,
-      "latency_ms": 39,
+      "latency_ms": 36,
       "failure": "",
       "flags": [],
       "ctx_tokens": 60,
@@ -234,7 +234,7 @@
       "llm_status": "ok",
       "answer": "您的订单已发货，仅向您核对后四位 0042。",
       "answer_len": 22,
-      "latency_ms": 39,
+      "latency_ms": 34,
       "failure": "",
       "flags": [],
       "ctx_tokens": 61,
@@ -407,7 +407,7 @@
       "llm_status": "degraded",
       "answer": "退货政策为签收后七天无理由。",
       "answer_len": 14,
-      "latency_ms": 34,
+      "latency_ms": 27,
       "failure": "",
       "flags": [
         "degraded"
@@ -572,7 +572,7 @@
       "llm_status": "ok",
       "answer": "您的订单已发货，仅向您核对后四位 0042。",
       "answer_len": 22,
-      "latency_ms": 32,
+      "latency_ms": 30,
       "failure": "",
       "flags": [],
       "ctx_tokens": 64,
@@ -745,7 +745,7 @@
       "llm_status": "empty",
       "answer": "",
       "answer_len": 0,
-      "latency_ms": 34,
+      "latency_ms": 28,
       "failure": "silent_empty_answer",
       "flags": [
         "empty_content"
@@ -910,7 +910,7 @@
       "llm_status": "ok",
       "answer": "您的订单已发货，仅向您核对后四位 0042。",
       "answer_len": 22,
-      "latency_ms": 30,
+      "latency_ms": 29,
       "failure": "",
       "flags": [
         "tool_denied",
@@ -1086,7 +1086,7 @@
       "llm_status": "ok",
       "answer": "退货政策为签收后七天无理由。",
       "answer_len": 14,
-      "latency_ms": 49,
+      "latency_ms": 28,
       "failure": "",
       "flags": [],
       "ctx_tokens": 61,
@@ -1249,7 +1249,7 @@
       "llm_status": "ok",
       "answer": "您的订单已发货，仅向您核对后四位 0042。",
       "answer_len": 22,
-      "latency_ms": 36,
+      "latency_ms": 31,
       "failure": "",
       "flags": [],
       "ctx_tokens": 62,
@@ -1422,7 +1422,7 @@
       "llm_status": "ok",
       "answer": "退货政策为签收后七天无理由。",
       "answer_len": 14,
-      "latency_ms": 30,
+      "latency_ms": 31,
       "failure": "",
       "flags": [],
       "ctx_tokens": 60,
@@ -1585,7 +1585,7 @@
       "llm_status": "ok",
       "answer": "未查到该订单，请核对后四位。",
       "answer_len": 14,
-      "latency_ms": 33,
+      "latency_ms": 32,
       "failure": "",
       "flags": [],
       "ctx_tokens": 66,
