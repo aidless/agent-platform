@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>agent-platform · 工单链路 Demo</title>
+  <meta name="description" content="一条客服工单穿过网关、订单库、工具沙箱、记忆压缩、LLM 和可观测层的可复现 Demo。">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">agent-platform · M7 end-to-end</p>
+        <h1>单模块绿灯，<br>不等于端到端能跑。</h1>
+        <p class="lede">
+          一条工单穿过网关、订单库、工具沙箱、记忆压缩、LLM 和可观测层。
+          页面上的每个数字都来自一次确定性离线运行；本地模式可以现场重跑。
+        </p>
+      </div>
+      <div class="mode-card">
+        <span id="mode-badge" class="badge badge-neutral">加载中</span>
+        <p id="mode-note" class="mode-note">正在读取构建产物…</p>
+        <div class="mode-actions">
+          <button id="rerun" class="button" type="button" disabled>重跑整批</button>
+          <a id="raw-link" class="button button-ghost" href="./runs.json" target="_blank" rel="noreferrer">查看 runs.json</a>
+        </div>
+        <p id="rerun-status" class="rerun-status" aria-live="polite"></p>
+      </div>
+    </header>
+
+    <div id="error" class="error" hidden></div>
+
+    <section class="summary" id="summary" aria-label="关键证据"></section>
+
+    <main class="layout">
+      <section class="panel ticket-panel" aria-labelledby="tickets-title">
+        <div class="panel-heading">
+          <h2 id="tickets-title">工单</h2>
+          <span class="muted">选择一张，查看完整链路</span>
+        </div>
+        <div id="ticket-list" class="ticket-list" role="list"></div>
+      </section>
+
+      <section class="panel detail-panel" aria-labelledby="detail-title">
+        <div class="panel-heading">
+          <h2 id="detail-title">链路</h2>
+          <span id="detail-scenario" class="muted"></span>
+        </div>
+        <p id="ticket-text" class="ticket-text"></p>
+        <div id="stage-timeline" class="timeline"></div>
+        <div id="answer" class="answer"></div>
+      </section>
+
+      <aside class="panel evidence-panel" aria-labelledby="evidence-title">
+        <div class="panel-heading">
+          <h2 id="evidence-title">证据与来源</h2>
+          <span class="muted">每个数字都能追到落盘字段</span>
+        </div>
+        <div id="evidence"></div>
+        <button id="raw-toggle" class="button button-ghost" type="button" aria-expanded="false">查看本条原始 JSON</button>
+        <pre id="raw-json" class="raw-json" hidden></pre>
+      </aside>
+    </main>
+
+    <section class="panel boundaries" aria-labelledby="boundaries-title">
+      <div class="panel-heading">
+        <h2 id="boundaries-title">这个 Demo 不证明什么</h2>
+        <span class="muted">直接来自 M7 的 refutes</span>
+      </div>
+      <ul id="boundaries"></ul>
+    </section>
+
+    <section class="panel provenance" aria-labelledby="meta-title">
+      <div class="panel-heading">
+        <h2 id="meta-title">构建信息</h2>
+        <span class="muted">回放的是哪一次运行</span>
+      </div>
+      <dl id="meta"></dl>
+    </section>
+
+    <footer class="footer">
+      <p>
+        <strong>真实：</strong>链路代码、SQLite 订单库（合成数据）、工具白名单、记忆压缩、网关记账、失败注入。
+        <strong>模拟：</strong>LLM 回答由脚本上游生成；失败率由脚本注入；工单是手写的；延迟是观测值，不是 SLO。
+      </p>
+    </footer>
+  </div>
+  <noscript>这个页面需要 JavaScript 才能读取 runs.json。</noscript>
+  <script src="./app.js"></script>
+</body>
+</html>

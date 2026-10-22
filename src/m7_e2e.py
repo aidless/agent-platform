@@ -67,6 +67,19 @@ HISTORY = [
     ("assistant", "是的，默认开电子发票，可以在订单详情里下载。"),
 ]
 
+# Demo 与 smoke 报告共用同一份边界声明，避免两处文案漂移。
+REFUTES = [
+    "工单只有 10 条、且是手写的，不是真实客服流量分布；"
+    "端到端 p95 是描述统计，不构成 SLO。",
+    "离线模式的失败率（timeout 5% + 空回答 5%）是**脚本注入**的，"
+    "不是 ollama 的真实可用率。",
+    "工具只做 order_id 精确查询，没有模糊匹配/多轮澄清；"
+    "真实客服场景里「查不到」的比例会高得多。",
+    "没有用户侧反馈回路（工单是否解决），所以「成功」定义是"
+    "「模型返回了非空内容」，不等于用户满意。",
+    "M6 的订单库是合成 2000 行，不是真实交易数据。",
+]
+
 SYSTEM_PROMPT = (
     "你是电商客服助手。回答要简短、可核验。"
     + CONSTRAINT_TURN
@@ -329,6 +342,24 @@ def summarize(results: list[TicketResult]) -> dict:
     }
 
 
+def ensure_order_db(path: Path) -> None:
+    """离线跑 M7 所需的订单库；已存在则不动。
+
+    `data/` 在 .gitignore 里，clean clone 不会有这份 DB，所以 demo 与
+    smoke 都必须用同一个建库口径。
+    """
+    if path.exists():
+        return
+    from aplat.common import DDL
+    with C.db(path) as conn:
+        conn.executescript(DDL)
+        conn.executemany(
+            "INSERT OR REPLACE INTO etl_orders VALUES (?,?,?,?,?,?)",
+            [(i, i % 97, ["paid", "refund", "pending"][i % 3], 1000 + i,
+              "2026-10-01", "2026-10-02") for i in range(1, 2001)])
+        conn.commit()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--smoke", action="store_true")
@@ -339,16 +370,7 @@ def main() -> int:
     tmp = Path(tempfile.mkdtemp(prefix="ap_m7_"))
     db = tmp / "e2e.db"
     order_db = ROOT / "data" / "aplat_etl.db"
-    if not order_db.exists():
-        # 用 M6 的建表逻辑现造一份（离线也能跑）
-        from aplat.common import DDL
-        with C.db(order_db) as conn:
-            conn.executescript(DDL)
-            conn.executemany(
-                "INSERT OR REPLACE INTO etl_orders VALUES (?,?,?,?,?,?)",
-                [(i, i % 97, ["paid", "refund", "pending"][i % 3], 1000 + i,
-                  "2026-10-01", "2026-10-02") for i in range(1, 2001)])
-            conn.commit()
+    ensure_order_db(order_db)
 
     upstream = ScriptedUpstream()
     if a.live:
@@ -432,17 +454,7 @@ def main() -> int:
         "chain": ["M1 gateway", "M6 order store", "M4 sandbox", "M3 memory",
                   "M2 observability"],
         "findings": findings,
-        "refutes": [
-            "工单只有 10 条、且是手写的，不是真实客服流量分布；"
-            "端到端 p95 是描述统计，不构成 SLO。",
-            "离线模式的失败率（timeout 5% + 空回答 5%）是**脚本注入**的，"
-            "不是 ollama 的真实可用率。",
-            "工具只做 order_id 精确查询，没有模糊匹配/多轮澄清；"
-            "真实客服场景里「查不到」的比例会高得多。",
-            "没有用户侧反馈回路（工单是否解决），所以「成功」定义是"
-            "「模型返回了非空内容」，不等于用户满意。",
-            "M6 的订单库是合成 2000 行，不是真实交易数据。",
-        ],
+        "refutes": REFUTES,
         "summary": s,
         "tickets": [
             {"id": r.ticket_id, "text": r.text, "tool": r.tool,

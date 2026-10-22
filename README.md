@@ -28,6 +28,19 @@ README 这里只转述结论，不复述全部细节。
 2. **M4b 把 README 里声明的「不是 OS 隔离」补成真 OS 隔离**（`python:3.12-slim` + 8 条攻击用例），其中"无残留容器"一条抓出了我自己的真 bug（`docker kill` 异步导致残留）。
 3. **M3b/M6-v2 把另两条已声明边界也补了**。
 
+## Demo：M7 工单链路
+
+`demo/` 把 M7 的离线链路做成一页可回放的证据面板：左侧选工单，中间看六步链路，
+右侧每个数字都能追到 SQLite 表/字段；本地模式可以现场重跑。
+
+```bash
+python3 demo/server.py                  # http://127.0.0.1:8000/
+make demo-build                         # 生成静态回放 demo/public/runs.json
+make demo-test                          # Demo 契约测试
+```
+
+静态回放只发布 `demo/public/`，不需要后端。详见 [demo/README.md](demo/README.md)。
+
 ## 复现（一条命令，全部离线）
 
 ```bash

@@ -19,7 +19,7 @@ MODULES   := $(sort $(wildcard $(SRC_DIR)/m[0-9]*.py))
 # 需要真实外部依赖的模块：M6（docker+postgres）及其 drift 变体
 NEEDS_DOCKER := $(SRC_DIR)/m6_etl.py
 
-.PHONY: help smoke smoke-offline gates scan clean deps
+.PHONY: help smoke smoke-offline gates scan clean deps demo demo-build demo-test
 
 ## help: 默认 target，列出所有命令
 help:
@@ -32,6 +32,9 @@ help:
 	@echo "  make scan           # 只跑跨仓无证据数字扫描"
 	@echo "  make clean          # 删 __pycache__ / *.pyc / 临时 db"
 	@echo "  make deps           # 打印依赖与可用性自检"
+	@echo "  make demo           # 启动 M7 工单链路 Demo（本地实时）"
+	@echo "  make demo-build     # 生成 demo/public/runs.json"
+	@echo "  make demo-test      # 跑 Demo 契约测试"
 	@echo ""
 	@echo "发现的模块（$(words $(MODULES)) 个）："
 	@for m in $(MODULES); do echo "    $$m"; done
@@ -85,6 +88,18 @@ scan:
 ##   $(...) 与制表符规则折腾，出错难查；文件能单独跑、能进 CI、能有 --help
 deps:
 	@$(PY) tools/deps_check.py
+
+## demo: 启动本地 Demo（静态页 + /api/run 实时重跑）
+demo:
+	@$(PY) demo/server.py
+
+## demo-build: 生成静态回放 payload，并与 results/m7_e2e.json 对账
+demo-build:
+	@$(PY) demo/build_static.py
+
+## demo-test: Demo 契约测试（stdlib only）
+demo-test:
+	@$(PY) -m unittest demo/test_demo.py -v
 
 ## clean
 clean:

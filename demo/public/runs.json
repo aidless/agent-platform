@@ -1,0 +1,1771 @@
+{
+  "meta": {
+    "repo": "agent-platform",
+    "demo": "m7-ticket-pipeline",
+    "commit": "8e1881f",
+    "worktree_dirty": true,
+    "dirty_paths": [
+      "Makefile",
+      "README.md",
+      "src/m7_e2e.py",
+      "demo/"
+    ],
+    "generated_at": "2026-10-22T07:06:03+00:00",
+    "mode": "offline-scripted",
+    "seed": 20261011,
+    "model": "qwen3:8b",
+    "python": "3.12.3",
+    "source_result": "results/m7_e2e.json",
+    "note": "静态回放是一次确定性离线运行的产物；本地运行 python3 demo/server.py 可实时重算。"
+  },
+  "summary": {
+    "tickets": 10,
+    "success": 9,
+    "failed": 1,
+    "failure_kinds": {
+      "silent_empty_answer": 1
+    },
+    "latency_ms": {
+      "p50": 107.0,
+      "p95": 116.8,
+      "max": 120,
+      "p50_ci95": [
+        105.0,
+        111.0
+      ]
+    },
+    "context_tokens": {
+      "compacted_sum": 620,
+      "uncompacted_sum": 1181,
+      "saved_tokens": 561,
+      "saved_pct_mean": 0.4752
+    },
+    "tokens": {
+      "prompt_sum": 1298,
+      "completion_sum": 149
+    },
+    "flags": {
+      "answered_without_tool_data": 1,
+      "degraded": 1,
+      "empty_content": 1,
+      "tool_denied": 1
+    },
+    "pinned": 10,
+    "tool_verdicts": {
+      "ok": 5,
+      "denied": 1
+    }
+  },
+  "items": [
+    {
+      "id": "T00",
+      "text": "我的订单到哪了？",
+      "scenario": "正常路径",
+      "tool": "query_order",
+      "tool_verdict": "ok",
+      "llm_status": "ok",
+      "answer": "您的订单已发货，仅向您核对后四位 0042。",
+      "answer_len": 22,
+      "latency_ms": 113,
+      "failure": "",
+      "flags": [],
+      "ctx_tokens": 60,
+      "ctx_tokens_uncompacted": 116,
+      "saved_tokens": 56,
+      "saved_pct": 0.4828,
+      "pinned": 1,
+      "stages": [
+        {
+          "name": "工单进入",
+          "key": "intake",
+          "status": "ok",
+          "detail": "我的订单到哪了？",
+          "metrics": [
+            {
+              "label": "字符数",
+              "value": 8,
+              "source": "m7_e2e.TICKETS"
+            }
+          ]
+        },
+        {
+          "name": "工具沙箱",
+          "key": "tool",
+          "status": "ok",
+          "detail": "query_order → ok：whitelisted",
+          "metrics": [
+            {
+              "label": "判定",
+              "value": "ok",
+              "source": "tool_audit.verdict (request_id=T00)"
+            },
+            {
+              "label": "尝试次数",
+              "value": 1,
+              "source": "tool_audit rows"
+            },
+            {
+              "label": "耗时",
+              "value": "0 ms",
+              "source": "tool_audit.latency_ms"
+            }
+          ]
+        },
+        {
+          "name": "记忆压缩",
+          "key": "memory",
+          "status": "ok",
+          "detail": "滑窗 k=3；pinned 合规约束仍在上下文：合规要求：任何回复都不得包含完整订单号，只能给后四位。",
+          "metrics": [
+            {
+              "label": "压缩后",
+              "value": "60 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens"
+            },
+            {
+              "label": "压缩前",
+              "value": "116 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens_uncompacted"
+            },
+            {
+              "label": "节省",
+              "value": "56 tokens (48%)",
+              "source": "压缩前 - 压缩后"
+            },
+            {
+              "label": "pinned",
+              "value": 1,
+              "source": "memory_item.pinned"
+            },
+            {
+              "label": "会话轮次",
+              "value": 7,
+              "source": "memory_item.session_id"
+            }
+          ]
+        },
+        {
+          "name": "网关 / LLM",
+          "key": "gateway",
+          "status": "ok",
+          "detail": "model=qwen3:8b；route=default；cache_hit=False；degraded=False",
+          "metrics": [
+            {
+              "label": "prompt",
+              "value": "134 tokens",
+              "source": "gateway_request.prompt_tokens"
+            },
+            {
+              "label": "completion",
+              "value": "18 tokens",
+              "source": "gateway_request.completion_tokens"
+            },
+            {
+              "label": "耗时",
+              "value": "0 ms",
+              "source": "gateway_request.latency_ms"
+            },
+            {
+              "label": "成本",
+              "value": "$0.000000",
+              "source": "gateway_request.cost_usd"
+            },
+            {
+              "label": "网关记录",
+              "value": 1,
+              "source": "gateway_request.idempotency_key"
+            }
+          ]
+        },
+        {
+          "name": "失败分类",
+          "key": "classification",
+          "status": "ok",
+          "detail": "未分类失败 0",
+          "metrics": [
+            {
+              "label": "flags",
+              "value": "—",
+              "source": "m7_e2e.TicketResult.flags"
+            }
+          ]
+        },
+        {
+          "name": "回答",
+          "key": "answer",
+          "status": "ok",
+          "detail": "您的订单已发货，仅向您核对后四位 0042。",
+          "metrics": [
+            {
+              "label": "回答长度",
+              "value": "22 字",
+              "source": "gateway_request.content"
+            }
+          ]
+        }
+      ],
+      "sources": {
+        "answer": {
+          "table": "gateway_request",
+          "field": "content",
+          "key": "T00-ok"
+        },
+        "gateway_status": {
+          "table": "gateway_request",
+          "field": "status",
+          "key": "T00-ok"
+        },
+        "tool_verdict": {
+          "table": "tool_audit",
+          "field": "verdict",
+          "key": "T00"
+        },
+        "pinned": {
+          "table": "memory_item",
+          "field": "pinned",
+          "key": "sess-T00"
+        },
+        "summary": {
+          "artifact": "results/m7_e2e.json#/summary"
+        }
+      }
+    },
+    {
+      "id": "T01",
+      "text": "这个订单能退款吗？",
+      "scenario": "正常路径",
+      "tool": "query_order",
+      "tool_verdict": "ok",
+      "llm_status": "ok",
+      "answer": "您的订单已发货，仅向您核对后四位 0042。",
+      "answer_len": 22,
+      "latency_ms": 109,
+      "failure": "",
+      "flags": [],
+      "ctx_tokens": 61,
+      "ctx_tokens_uncompacted": 117,
+      "saved_tokens": 56,
+      "saved_pct": 0.4786,
+      "pinned": 1,
+      "stages": [
+        {
+          "name": "工单进入",
+          "key": "intake",
+          "status": "ok",
+          "detail": "这个订单能退款吗？",
+          "metrics": [
+            {
+              "label": "字符数",
+              "value": 9,
+              "source": "m7_e2e.TICKETS"
+            }
+          ]
+        },
+        {
+          "name": "工具沙箱",
+          "key": "tool",
+          "status": "ok",
+          "detail": "query_order → ok：whitelisted",
+          "metrics": [
+            {
+              "label": "判定",
+              "value": "ok",
+              "source": "tool_audit.verdict (request_id=T01)"
+            },
+            {
+              "label": "尝试次数",
+              "value": 1,
+              "source": "tool_audit rows"
+            },
+            {
+              "label": "耗时",
+              "value": "0 ms",
+              "source": "tool_audit.latency_ms"
+            }
+          ]
+        },
+        {
+          "name": "记忆压缩",
+          "key": "memory",
+          "status": "ok",
+          "detail": "滑窗 k=3；pinned 合规约束仍在上下文：合规要求：任何回复都不得包含完整订单号，只能给后四位。",
+          "metrics": [
+            {
+              "label": "压缩后",
+              "value": "61 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens"
+            },
+            {
+              "label": "压缩前",
+              "value": "117 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens_uncompacted"
+            },
+            {
+              "label": "节省",
+              "value": "56 tokens (48%)",
+              "source": "压缩前 - 压缩后"
+            },
+            {
+              "label": "pinned",
+              "value": 1,
+              "source": "memory_item.pinned"
+            },
+            {
+              "label": "会话轮次",
+              "value": 7,
+              "source": "memory_item.session_id"
+            }
+          ]
+        },
+        {
+          "name": "网关 / LLM",
+          "key": "gateway",
+          "status": "ok",
+          "detail": "model=qwen3:8b；route=default；cache_hit=False；degraded=False",
+          "metrics": [
+            {
+              "label": "prompt",
+              "value": "135 tokens",
+              "source": "gateway_request.prompt_tokens"
+            },
+            {
+              "label": "completion",
+              "value": "18 tokens",
+              "source": "gateway_request.completion_tokens"
+            },
+            {
+              "label": "耗时",
+              "value": "0 ms",
+              "source": "gateway_request.latency_ms"
+            },
+            {
+              "label": "成本",
+              "value": "$0.000000",
+              "source": "gateway_request.cost_usd"
+            },
+            {
+              "label": "网关记录",
+              "value": 1,
+              "source": "gateway_request.idempotency_key"
+            }
+          ]
+        },
+        {
+          "name": "失败分类",
+          "key": "classification",
+          "status": "ok",
+          "detail": "未分类失败 0",
+          "metrics": [
+            {
+              "label": "flags",
+              "value": "—",
+              "source": "m7_e2e.TicketResult.flags"
+            }
+          ]
+        },
+        {
+          "name": "回答",
+          "key": "answer",
+          "status": "ok",
+          "detail": "您的订单已发货，仅向您核对后四位 0042。",
+          "metrics": [
+            {
+              "label": "回答长度",
+              "value": "22 字",
+              "source": "gateway_request.content"
+            }
+          ]
+        }
+      ],
+      "sources": {
+        "answer": {
+          "table": "gateway_request",
+          "field": "content",
+          "key": "T01-ok"
+        },
+        "gateway_status": {
+          "table": "gateway_request",
+          "field": "status",
+          "key": "T01-ok"
+        },
+        "tool_verdict": {
+          "table": "tool_audit",
+          "field": "verdict",
+          "key": "T01"
+        },
+        "pinned": {
+          "table": "memory_item",
+          "field": "pinned",
+          "key": "sess-T01"
+        },
+        "summary": {
+          "artifact": "results/m7_e2e.json#/summary"
+        }
+      }
+    },
+    {
+      "id": "T02",
+      "text": "你们的退货政策是什么？",
+      "scenario": "脚本注入 timeout：primary 失败，网关走 fallback，结果标记 degraded。",
+      "tool": "",
+      "tool_verdict": "",
+      "llm_status": "degraded",
+      "answer": "退货政策为签收后七天无理由。",
+      "answer_len": 14,
+      "latency_ms": 106,
+      "failure": "",
+      "flags": [
+        "degraded"
+      ],
+      "ctx_tokens": 63,
+      "ctx_tokens_uncompacted": 119,
+      "saved_tokens": 56,
+      "saved_pct": 0.4706,
+      "pinned": 1,
+      "stages": [
+        {
+          "name": "工单进入",
+          "key": "intake",
+          "status": "ok",
+          "detail": "你们的退货政策是什么？",
+          "metrics": [
+            {
+              "label": "字符数",
+              "value": 11,
+              "source": "m7_e2e.TICKETS"
+            }
+          ]
+        },
+        {
+          "name": "工具沙箱",
+          "key": "tool",
+          "status": "skipped",
+          "detail": "无需工具：策略/知识类问题，未进入工具调用路径。",
+          "metrics": [
+            {
+              "label": "判定",
+              "value": "skipped",
+              "source": "m7_e2e.tool_for_ticket"
+            }
+          ]
+        },
+        {
+          "name": "记忆压缩",
+          "key": "memory",
+          "status": "ok",
+          "detail": "滑窗 k=3；pinned 合规约束仍在上下文：合规要求：任何回复都不得包含完整订单号，只能给后四位。",
+          "metrics": [
+            {
+              "label": "压缩后",
+              "value": "63 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens"
+            },
+            {
+              "label": "压缩前",
+              "value": "119 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens_uncompacted"
+            },
+            {
+              "label": "节省",
+              "value": "56 tokens (47%)",
+              "source": "压缩前 - 压缩后"
+            },
+            {
+              "label": "pinned",
+              "value": 1,
+              "source": "memory_item.pinned"
+            },
+            {
+              "label": "会话轮次",
+              "value": 7,
+              "source": "memory_item.session_id"
+            }
+          ]
+        },
+        {
+          "name": "网关 / LLM",
+          "key": "gateway",
+          "status": "degraded",
+          "detail": "model=llama3.2:3b；route=default；cache_hit=False；degraded=True",
+          "metrics": [
+            {
+              "label": "prompt",
+              "value": "121 tokens",
+              "source": "gateway_request.prompt_tokens"
+            },
+            {
+              "label": "completion",
+              "value": "15 tokens",
+              "source": "gateway_request.completion_tokens"
+            },
+            {
+              "label": "耗时",
+              "value": "9 ms",
+              "source": "gateway_request.latency_ms"
+            },
+            {
+              "label": "成本",
+              "value": "$0.000000",
+              "source": "gateway_request.cost_usd"
+            },
+            {
+              "label": "网关记录",
+              "value": 1,
+              "source": "gateway_request.idempotency_key"
+            }
+          ]
+        },
+        {
+          "name": "失败分类",
+          "key": "classification",
+          "status": "ok",
+          "detail": "未分类失败 0",
+          "metrics": [
+            {
+              "label": "flags",
+              "value": "degraded",
+              "source": "m7_e2e.TicketResult.flags"
+            }
+          ]
+        },
+        {
+          "name": "回答",
+          "key": "answer",
+          "status": "ok",
+          "detail": "退货政策为签收后七天无理由。",
+          "metrics": [
+            {
+              "label": "回答长度",
+              "value": "14 字",
+              "source": "gateway_request.content"
+            }
+          ]
+        }
+      ],
+      "sources": {
+        "answer": {
+          "table": "gateway_request",
+          "field": "content",
+          "key": "T02-"
+        },
+        "gateway_status": {
+          "table": "gateway_request",
+          "field": "status",
+          "key": "T02-"
+        },
+        "tool_verdict": {
+          "table": "tool_audit",
+          "field": "verdict",
+          "key": "T02"
+        },
+        "pinned": {
+          "table": "memory_item",
+          "field": "pinned",
+          "key": "sess-T02"
+        },
+        "summary": {
+          "artifact": "results/m7_e2e.json#/summary"
+        }
+      }
+    },
+    {
+      "id": "T03",
+      "text": "订单被别人签收了怎么办？",
+      "scenario": "正常路径",
+      "tool": "query_order",
+      "tool_verdict": "ok",
+      "llm_status": "ok",
+      "answer": "您的订单已发货，仅向您核对后四位 0042。",
+      "answer_len": 22,
+      "latency_ms": 120,
+      "failure": "",
+      "flags": [],
+      "ctx_tokens": 64,
+      "ctx_tokens_uncompacted": 120,
+      "saved_tokens": 56,
+      "saved_pct": 0.4667,
+      "pinned": 1,
+      "stages": [
+        {
+          "name": "工单进入",
+          "key": "intake",
+          "status": "ok",
+          "detail": "订单被别人签收了怎么办？",
+          "metrics": [
+            {
+              "label": "字符数",
+              "value": 12,
+              "source": "m7_e2e.TICKETS"
+            }
+          ]
+        },
+        {
+          "name": "工具沙箱",
+          "key": "tool",
+          "status": "ok",
+          "detail": "query_order → ok：whitelisted",
+          "metrics": [
+            {
+              "label": "判定",
+              "value": "ok",
+              "source": "tool_audit.verdict (request_id=T03)"
+            },
+            {
+              "label": "尝试次数",
+              "value": 1,
+              "source": "tool_audit rows"
+            },
+            {
+              "label": "耗时",
+              "value": "0 ms",
+              "source": "tool_audit.latency_ms"
+            }
+          ]
+        },
+        {
+          "name": "记忆压缩",
+          "key": "memory",
+          "status": "ok",
+          "detail": "滑窗 k=3；pinned 合规约束仍在上下文：合规要求：任何回复都不得包含完整订单号，只能给后四位。",
+          "metrics": [
+            {
+              "label": "压缩后",
+              "value": "64 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens"
+            },
+            {
+              "label": "压缩前",
+              "value": "120 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens_uncompacted"
+            },
+            {
+              "label": "节省",
+              "value": "56 tokens (47%)",
+              "source": "压缩前 - 压缩后"
+            },
+            {
+              "label": "pinned",
+              "value": 1,
+              "source": "memory_item.pinned"
+            },
+            {
+              "label": "会话轮次",
+              "value": 7,
+              "source": "memory_item.session_id"
+            }
+          ]
+        },
+        {
+          "name": "网关 / LLM",
+          "key": "gateway",
+          "status": "ok",
+          "detail": "model=qwen3:8b；route=default；cache_hit=False；degraded=False",
+          "metrics": [
+            {
+              "label": "prompt",
+              "value": "142 tokens",
+              "source": "gateway_request.prompt_tokens"
+            },
+            {
+              "label": "completion",
+              "value": "18 tokens",
+              "source": "gateway_request.completion_tokens"
+            },
+            {
+              "label": "耗时",
+              "value": "0 ms",
+              "source": "gateway_request.latency_ms"
+            },
+            {
+              "label": "成本",
+              "value": "$0.000000",
+              "source": "gateway_request.cost_usd"
+            },
+            {
+              "label": "网关记录",
+              "value": 1,
+              "source": "gateway_request.idempotency_key"
+            }
+          ]
+        },
+        {
+          "name": "失败分类",
+          "key": "classification",
+          "status": "ok",
+          "detail": "未分类失败 0",
+          "metrics": [
+            {
+              "label": "flags",
+              "value": "—",
+              "source": "m7_e2e.TicketResult.flags"
+            }
+          ]
+        },
+        {
+          "name": "回答",
+          "key": "answer",
+          "status": "ok",
+          "detail": "您的订单已发货，仅向您核对后四位 0042。",
+          "metrics": [
+            {
+              "label": "回答长度",
+              "value": "22 字",
+              "source": "gateway_request.content"
+            }
+          ]
+        }
+      ],
+      "sources": {
+        "answer": {
+          "table": "gateway_request",
+          "field": "content",
+          "key": "T03-ok"
+        },
+        "gateway_status": {
+          "table": "gateway_request",
+          "field": "status",
+          "key": "T03-ok"
+        },
+        "tool_verdict": {
+          "table": "tool_audit",
+          "field": "verdict",
+          "key": "T03"
+        },
+        "pinned": {
+          "table": "memory_item",
+          "field": "pinned",
+          "key": "sess-T03"
+        },
+        "summary": {
+          "artifact": "results/m7_e2e.json#/summary"
+        }
+      }
+    },
+    {
+      "id": "T04",
+      "text": "发票能重开吗？",
+      "scenario": "脚本注入空 content + done_reason=length：HTTP 200 但回答为空，端到端记为 silent_empty_answer。",
+      "tool": "",
+      "tool_verdict": "",
+      "llm_status": "empty",
+      "answer": "",
+      "answer_len": 0,
+      "latency_ms": 105,
+      "failure": "silent_empty_answer",
+      "flags": [
+        "empty_content"
+      ],
+      "ctx_tokens": 59,
+      "ctx_tokens_uncompacted": 115,
+      "saved_tokens": 56,
+      "saved_pct": 0.487,
+      "pinned": 1,
+      "stages": [
+        {
+          "name": "工单进入",
+          "key": "intake",
+          "status": "ok",
+          "detail": "发票能重开吗？",
+          "metrics": [
+            {
+              "label": "字符数",
+              "value": 7,
+              "source": "m7_e2e.TICKETS"
+            }
+          ]
+        },
+        {
+          "name": "工具沙箱",
+          "key": "tool",
+          "status": "skipped",
+          "detail": "无需工具：策略/知识类问题，未进入工具调用路径。",
+          "metrics": [
+            {
+              "label": "判定",
+              "value": "skipped",
+              "source": "m7_e2e.tool_for_ticket"
+            }
+          ]
+        },
+        {
+          "name": "记忆压缩",
+          "key": "memory",
+          "status": "ok",
+          "detail": "滑窗 k=3；pinned 合规约束仍在上下文：合规要求：任何回复都不得包含完整订单号，只能给后四位。",
+          "metrics": [
+            {
+              "label": "压缩后",
+              "value": "59 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens"
+            },
+            {
+              "label": "压缩前",
+              "value": "115 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens_uncompacted"
+            },
+            {
+              "label": "节省",
+              "value": "56 tokens (49%)",
+              "source": "压缩前 - 压缩后"
+            },
+            {
+              "label": "pinned",
+              "value": 1,
+              "source": "memory_item.pinned"
+            },
+            {
+              "label": "会话轮次",
+              "value": 7,
+              "source": "memory_item.session_id"
+            }
+          ]
+        },
+        {
+          "name": "网关 / LLM",
+          "key": "gateway",
+          "status": "empty",
+          "detail": "model=qwen3:8b；route=default；cache_hit=False；degraded=False；error_kind=empty_content",
+          "metrics": [
+            {
+              "label": "prompt",
+              "value": "113 tokens",
+              "source": "gateway_request.prompt_tokens"
+            },
+            {
+              "label": "completion",
+              "value": "0 tokens",
+              "source": "gateway_request.completion_tokens"
+            },
+            {
+              "label": "耗时",
+              "value": "0 ms",
+              "source": "gateway_request.latency_ms"
+            },
+            {
+              "label": "成本",
+              "value": "$0.000000",
+              "source": "gateway_request.cost_usd"
+            },
+            {
+              "label": "网关记录",
+              "value": 1,
+              "source": "gateway_request.idempotency_key"
+            }
+          ]
+        },
+        {
+          "name": "失败分类",
+          "key": "classification",
+          "status": "error",
+          "detail": "silent_empty_answer",
+          "metrics": [
+            {
+              "label": "flags",
+              "value": "empty_content",
+              "source": "m7_e2e.TicketResult.flags"
+            }
+          ]
+        },
+        {
+          "name": "回答",
+          "key": "answer",
+          "status": "error",
+          "detail": "(空回答：HTTP 200 但 content 为空)",
+          "metrics": [
+            {
+              "label": "回答长度",
+              "value": "0 字",
+              "source": "gateway_request.content"
+            }
+          ]
+        }
+      ],
+      "sources": {
+        "answer": {
+          "table": "gateway_request",
+          "field": "content",
+          "key": "T04-"
+        },
+        "gateway_status": {
+          "table": "gateway_request",
+          "field": "status",
+          "key": "T04-"
+        },
+        "tool_verdict": {
+          "table": "tool_audit",
+          "field": "verdict",
+          "key": "T04"
+        },
+        "pinned": {
+          "table": "memory_item",
+          "field": "pinned",
+          "key": "sess-T04"
+        },
+        "summary": {
+          "artifact": "results/m7_e2e.json#/summary"
+        }
+      }
+    },
+    {
+      "id": "T05",
+      "text": "我要投诉，订单一直没发货。",
+      "scenario": "模型尝试调用 issue_refund；它不在白名单，沙箱拒绝，但模型仍给出不带工具数据的回答。",
+      "tool": "issue_refund",
+      "tool_verdict": "denied",
+      "llm_status": "ok",
+      "answer": "您的订单已发货，仅向您核对后四位 0042。",
+      "answer_len": 22,
+      "latency_ms": 110,
+      "failure": "",
+      "flags": [
+        "tool_denied",
+        "answered_without_tool_data"
+      ],
+      "ctx_tokens": 64,
+      "ctx_tokens_uncompacted": 121,
+      "saved_tokens": 57,
+      "saved_pct": 0.4711,
+      "pinned": 1,
+      "stages": [
+        {
+          "name": "工单进入",
+          "key": "intake",
+          "status": "ok",
+          "detail": "我要投诉，订单一直没发货。",
+          "metrics": [
+            {
+              "label": "字符数",
+              "value": 13,
+              "source": "m7_e2e.TICKETS"
+            }
+          ]
+        },
+        {
+          "name": "工具沙箱",
+          "key": "tool",
+          "status": "error",
+          "detail": "issue_refund → denied：tool 'issue_refund' 不在白名单",
+          "metrics": [
+            {
+              "label": "判定",
+              "value": "denied",
+              "source": "tool_audit.verdict (request_id=T05)"
+            },
+            {
+              "label": "尝试次数",
+              "value": 1,
+              "source": "tool_audit rows"
+            },
+            {
+              "label": "耗时",
+              "value": "0 ms",
+              "source": "tool_audit.latency_ms"
+            }
+          ]
+        },
+        {
+          "name": "记忆压缩",
+          "key": "memory",
+          "status": "ok",
+          "detail": "滑窗 k=3；pinned 合规约束仍在上下文：合规要求：任何回复都不得包含完整订单号，只能给后四位。",
+          "metrics": [
+            {
+              "label": "压缩后",
+              "value": "64 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens"
+            },
+            {
+              "label": "压缩前",
+              "value": "121 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens_uncompacted"
+            },
+            {
+              "label": "节省",
+              "value": "57 tokens (47%)",
+              "source": "压缩前 - 压缩后"
+            },
+            {
+              "label": "pinned",
+              "value": 1,
+              "source": "memory_item.pinned"
+            },
+            {
+              "label": "会话轮次",
+              "value": 7,
+              "source": "memory_item.session_id"
+            }
+          ]
+        },
+        {
+          "name": "网关 / LLM",
+          "key": "gateway",
+          "status": "ok",
+          "detail": "model=qwen3:8b；route=default；cache_hit=False；degraded=False",
+          "metrics": [
+            {
+              "label": "prompt",
+              "value": "140 tokens",
+              "source": "gateway_request.prompt_tokens"
+            },
+            {
+              "label": "completion",
+              "value": "18 tokens",
+              "source": "gateway_request.completion_tokens"
+            },
+            {
+              "label": "耗时",
+              "value": "0 ms",
+              "source": "gateway_request.latency_ms"
+            },
+            {
+              "label": "成本",
+              "value": "$0.000000",
+              "source": "gateway_request.cost_usd"
+            },
+            {
+              "label": "网关记录",
+              "value": 1,
+              "source": "gateway_request.idempotency_key"
+            }
+          ]
+        },
+        {
+          "name": "失败分类",
+          "key": "classification",
+          "status": "ok",
+          "detail": "未分类失败 0",
+          "metrics": [
+            {
+              "label": "flags",
+              "value": "tool_denied, answered_without_tool_data",
+              "source": "m7_e2e.TicketResult.flags"
+            }
+          ]
+        },
+        {
+          "name": "回答",
+          "key": "answer",
+          "status": "ok",
+          "detail": "您的订单已发货，仅向您核对后四位 0042。",
+          "metrics": [
+            {
+              "label": "回答长度",
+              "value": "22 字",
+              "source": "gateway_request.content"
+            }
+          ]
+        }
+      ],
+      "sources": {
+        "answer": {
+          "table": "gateway_request",
+          "field": "content",
+          "key": "T05-denied"
+        },
+        "gateway_status": {
+          "table": "gateway_request",
+          "field": "status",
+          "key": "T05-denied"
+        },
+        "tool_verdict": {
+          "table": "tool_audit",
+          "field": "verdict",
+          "key": "T05"
+        },
+        "pinned": {
+          "table": "memory_item",
+          "field": "pinned",
+          "key": "sess-T05"
+        },
+        "summary": {
+          "artifact": "results/m7_e2e.json#/summary"
+        }
+      }
+    },
+    {
+      "id": "T06",
+      "text": "怎么修改收货地址？",
+      "scenario": "正常路径",
+      "tool": "",
+      "tool_verdict": "",
+      "llm_status": "ok",
+      "answer": "退货政策为签收后七天无理由。",
+      "answer_len": 14,
+      "latency_ms": 97,
+      "failure": "",
+      "flags": [],
+      "ctx_tokens": 61,
+      "ctx_tokens_uncompacted": 117,
+      "saved_tokens": 56,
+      "saved_pct": 0.4786,
+      "pinned": 1,
+      "stages": [
+        {
+          "name": "工单进入",
+          "key": "intake",
+          "status": "ok",
+          "detail": "怎么修改收货地址？",
+          "metrics": [
+            {
+              "label": "字符数",
+              "value": 9,
+              "source": "m7_e2e.TICKETS"
+            }
+          ]
+        },
+        {
+          "name": "工具沙箱",
+          "key": "tool",
+          "status": "skipped",
+          "detail": "无需工具：策略/知识类问题，未进入工具调用路径。",
+          "metrics": [
+            {
+              "label": "判定",
+              "value": "skipped",
+              "source": "m7_e2e.tool_for_ticket"
+            }
+          ]
+        },
+        {
+          "name": "记忆压缩",
+          "key": "memory",
+          "status": "ok",
+          "detail": "滑窗 k=3；pinned 合规约束仍在上下文：合规要求：任何回复都不得包含完整订单号，只能给后四位。",
+          "metrics": [
+            {
+              "label": "压缩后",
+              "value": "61 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens"
+            },
+            {
+              "label": "压缩前",
+              "value": "117 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens_uncompacted"
+            },
+            {
+              "label": "节省",
+              "value": "56 tokens (48%)",
+              "source": "压缩前 - 压缩后"
+            },
+            {
+              "label": "pinned",
+              "value": 1,
+              "source": "memory_item.pinned"
+            },
+            {
+              "label": "会话轮次",
+              "value": 7,
+              "source": "memory_item.session_id"
+            }
+          ]
+        },
+        {
+          "name": "网关 / LLM",
+          "key": "gateway",
+          "status": "ok",
+          "detail": "model=qwen3:8b；route=default；cache_hit=False；degraded=False",
+          "metrics": [
+            {
+              "label": "prompt",
+              "value": "117 tokens",
+              "source": "gateway_request.prompt_tokens"
+            },
+            {
+              "label": "completion",
+              "value": "15 tokens",
+              "source": "gateway_request.completion_tokens"
+            },
+            {
+              "label": "耗时",
+              "value": "0 ms",
+              "source": "gateway_request.latency_ms"
+            },
+            {
+              "label": "成本",
+              "value": "$0.000000",
+              "source": "gateway_request.cost_usd"
+            },
+            {
+              "label": "网关记录",
+              "value": 1,
+              "source": "gateway_request.idempotency_key"
+            }
+          ]
+        },
+        {
+          "name": "失败分类",
+          "key": "classification",
+          "status": "ok",
+          "detail": "未分类失败 0",
+          "metrics": [
+            {
+              "label": "flags",
+              "value": "—",
+              "source": "m7_e2e.TicketResult.flags"
+            }
+          ]
+        },
+        {
+          "name": "回答",
+          "key": "answer",
+          "status": "ok",
+          "detail": "退货政策为签收后七天无理由。",
+          "metrics": [
+            {
+              "label": "回答长度",
+              "value": "14 字",
+              "source": "gateway_request.content"
+            }
+          ]
+        }
+      ],
+      "sources": {
+        "answer": {
+          "table": "gateway_request",
+          "field": "content",
+          "key": "T06-"
+        },
+        "gateway_status": {
+          "table": "gateway_request",
+          "field": "status",
+          "key": "T06-"
+        },
+        "tool_verdict": {
+          "table": "tool_audit",
+          "field": "verdict",
+          "key": "T06"
+        },
+        "pinned": {
+          "table": "memory_item",
+          "field": "pinned",
+          "key": "sess-T06"
+        },
+        "summary": {
+          "artifact": "results/m7_e2e.json#/summary"
+        }
+      }
+    },
+    {
+      "id": "T07",
+      "text": "为什么扣了我两次钱？",
+      "scenario": "正常路径",
+      "tool": "query_order",
+      "tool_verdict": "ok",
+      "llm_status": "ok",
+      "answer": "您的订单已发货，仅向您核对后四位 0042。",
+      "answer_len": 22,
+      "latency_ms": 105,
+      "failure": "",
+      "flags": [],
+      "ctx_tokens": 62,
+      "ctx_tokens_uncompacted": 118,
+      "saved_tokens": 56,
+      "saved_pct": 0.4746,
+      "pinned": 1,
+      "stages": [
+        {
+          "name": "工单进入",
+          "key": "intake",
+          "status": "ok",
+          "detail": "为什么扣了我两次钱？",
+          "metrics": [
+            {
+              "label": "字符数",
+              "value": 10,
+              "source": "m7_e2e.TICKETS"
+            }
+          ]
+        },
+        {
+          "name": "工具沙箱",
+          "key": "tool",
+          "status": "ok",
+          "detail": "query_order → ok：whitelisted",
+          "metrics": [
+            {
+              "label": "判定",
+              "value": "ok",
+              "source": "tool_audit.verdict (request_id=T07)"
+            },
+            {
+              "label": "尝试次数",
+              "value": 1,
+              "source": "tool_audit rows"
+            },
+            {
+              "label": "耗时",
+              "value": "0 ms",
+              "source": "tool_audit.latency_ms"
+            }
+          ]
+        },
+        {
+          "name": "记忆压缩",
+          "key": "memory",
+          "status": "ok",
+          "detail": "滑窗 k=3；pinned 合规约束仍在上下文：合规要求：任何回复都不得包含完整订单号，只能给后四位。",
+          "metrics": [
+            {
+              "label": "压缩后",
+              "value": "62 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens"
+            },
+            {
+              "label": "压缩前",
+              "value": "118 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens_uncompacted"
+            },
+            {
+              "label": "节省",
+              "value": "56 tokens (47%)",
+              "source": "压缩前 - 压缩后"
+            },
+            {
+              "label": "pinned",
+              "value": 1,
+              "source": "memory_item.pinned"
+            },
+            {
+              "label": "会话轮次",
+              "value": 7,
+              "source": "memory_item.session_id"
+            }
+          ]
+        },
+        {
+          "name": "网关 / LLM",
+          "key": "gateway",
+          "status": "ok",
+          "detail": "model=qwen3:8b；route=default；cache_hit=False；degraded=False",
+          "metrics": [
+            {
+              "label": "prompt",
+              "value": "138 tokens",
+              "source": "gateway_request.prompt_tokens"
+            },
+            {
+              "label": "completion",
+              "value": "18 tokens",
+              "source": "gateway_request.completion_tokens"
+            },
+            {
+              "label": "耗时",
+              "value": "0 ms",
+              "source": "gateway_request.latency_ms"
+            },
+            {
+              "label": "成本",
+              "value": "$0.000000",
+              "source": "gateway_request.cost_usd"
+            },
+            {
+              "label": "网关记录",
+              "value": 1,
+              "source": "gateway_request.idempotency_key"
+            }
+          ]
+        },
+        {
+          "name": "失败分类",
+          "key": "classification",
+          "status": "ok",
+          "detail": "未分类失败 0",
+          "metrics": [
+            {
+              "label": "flags",
+              "value": "—",
+              "source": "m7_e2e.TicketResult.flags"
+            }
+          ]
+        },
+        {
+          "name": "回答",
+          "key": "answer",
+          "status": "ok",
+          "detail": "您的订单已发货，仅向您核对后四位 0042。",
+          "metrics": [
+            {
+              "label": "回答长度",
+              "value": "22 字",
+              "source": "gateway_request.content"
+            }
+          ]
+        }
+      ],
+      "sources": {
+        "answer": {
+          "table": "gateway_request",
+          "field": "content",
+          "key": "T07-ok"
+        },
+        "gateway_status": {
+          "table": "gateway_request",
+          "field": "status",
+          "key": "T07-ok"
+        },
+        "tool_verdict": {
+          "table": "tool_audit",
+          "field": "verdict",
+          "key": "T07"
+        },
+        "pinned": {
+          "table": "memory_item",
+          "field": "pinned",
+          "key": "sess-T07"
+        },
+        "summary": {
+          "artifact": "results/m7_e2e.json#/summary"
+        }
+      }
+    },
+    {
+      "id": "T08",
+      "text": "会员积分怎么算？",
+      "scenario": "正常路径",
+      "tool": "",
+      "tool_verdict": "",
+      "llm_status": "ok",
+      "answer": "退货政策为签收后七天无理由。",
+      "answer_len": 14,
+      "latency_ms": 105,
+      "failure": "",
+      "flags": [],
+      "ctx_tokens": 60,
+      "ctx_tokens_uncompacted": 116,
+      "saved_tokens": 56,
+      "saved_pct": 0.4828,
+      "pinned": 1,
+      "stages": [
+        {
+          "name": "工单进入",
+          "key": "intake",
+          "status": "ok",
+          "detail": "会员积分怎么算？",
+          "metrics": [
+            {
+              "label": "字符数",
+              "value": 8,
+              "source": "m7_e2e.TICKETS"
+            }
+          ]
+        },
+        {
+          "name": "工具沙箱",
+          "key": "tool",
+          "status": "skipped",
+          "detail": "无需工具：策略/知识类问题，未进入工具调用路径。",
+          "metrics": [
+            {
+              "label": "判定",
+              "value": "skipped",
+              "source": "m7_e2e.tool_for_ticket"
+            }
+          ]
+        },
+        {
+          "name": "记忆压缩",
+          "key": "memory",
+          "status": "ok",
+          "detail": "滑窗 k=3；pinned 合规约束仍在上下文：合规要求：任何回复都不得包含完整订单号，只能给后四位。",
+          "metrics": [
+            {
+              "label": "压缩后",
+              "value": "60 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens"
+            },
+            {
+              "label": "压缩前",
+              "value": "116 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens_uncompacted"
+            },
+            {
+              "label": "节省",
+              "value": "56 tokens (48%)",
+              "source": "压缩前 - 压缩后"
+            },
+            {
+              "label": "pinned",
+              "value": 1,
+              "source": "memory_item.pinned"
+            },
+            {
+              "label": "会话轮次",
+              "value": 7,
+              "source": "memory_item.session_id"
+            }
+          ]
+        },
+        {
+          "name": "网关 / LLM",
+          "key": "gateway",
+          "status": "ok",
+          "detail": "model=qwen3:8b；route=default；cache_hit=False；degraded=False",
+          "metrics": [
+            {
+              "label": "prompt",
+              "value": "116 tokens",
+              "source": "gateway_request.prompt_tokens"
+            },
+            {
+              "label": "completion",
+              "value": "15 tokens",
+              "source": "gateway_request.completion_tokens"
+            },
+            {
+              "label": "耗时",
+              "value": "0 ms",
+              "source": "gateway_request.latency_ms"
+            },
+            {
+              "label": "成本",
+              "value": "$0.000000",
+              "source": "gateway_request.cost_usd"
+            },
+            {
+              "label": "网关记录",
+              "value": 1,
+              "source": "gateway_request.idempotency_key"
+            }
+          ]
+        },
+        {
+          "name": "失败分类",
+          "key": "classification",
+          "status": "ok",
+          "detail": "未分类失败 0",
+          "metrics": [
+            {
+              "label": "flags",
+              "value": "—",
+              "source": "m7_e2e.TicketResult.flags"
+            }
+          ]
+        },
+        {
+          "name": "回答",
+          "key": "answer",
+          "status": "ok",
+          "detail": "退货政策为签收后七天无理由。",
+          "metrics": [
+            {
+              "label": "回答长度",
+              "value": "14 字",
+              "source": "gateway_request.content"
+            }
+          ]
+        }
+      ],
+      "sources": {
+        "answer": {
+          "table": "gateway_request",
+          "field": "content",
+          "key": "T08-"
+        },
+        "gateway_status": {
+          "table": "gateway_request",
+          "field": "status",
+          "key": "T08-"
+        },
+        "tool_verdict": {
+          "table": "tool_audit",
+          "field": "verdict",
+          "key": "T08"
+        },
+        "pinned": {
+          "table": "memory_item",
+          "field": "pinned",
+          "key": "sess-T08"
+        },
+        "summary": {
+          "artifact": "results/m7_e2e.json#/summary"
+        }
+      }
+    },
+    {
+      "id": "T09",
+      "text": "我要查一个不存在的订单号 00000000。",
+      "scenario": "订单号 00000000 查不到；工具如实返回空，模型回答查无此单。",
+      "tool": "query_order",
+      "tool_verdict": "ok",
+      "llm_status": "ok",
+      "answer": "未查到该订单，请核对后四位。",
+      "answer_len": 14,
+      "latency_ms": 108,
+      "failure": "",
+      "flags": [],
+      "ctx_tokens": 66,
+      "ctx_tokens_uncompacted": 122,
+      "saved_tokens": 56,
+      "saved_pct": 0.459,
+      "pinned": 1,
+      "stages": [
+        {
+          "name": "工单进入",
+          "key": "intake",
+          "status": "ok",
+          "detail": "我要查一个不存在的订单号 00000000。",
+          "metrics": [
+            {
+              "label": "字符数",
+              "value": 22,
+              "source": "m7_e2e.TICKETS"
+            }
+          ]
+        },
+        {
+          "name": "工具沙箱",
+          "key": "tool",
+          "status": "ok",
+          "detail": "query_order → ok：whitelisted",
+          "metrics": [
+            {
+              "label": "判定",
+              "value": "ok",
+              "source": "tool_audit.verdict (request_id=T09)"
+            },
+            {
+              "label": "尝试次数",
+              "value": 1,
+              "source": "tool_audit rows"
+            },
+            {
+              "label": "耗时",
+              "value": "1 ms",
+              "source": "tool_audit.latency_ms"
+            }
+          ]
+        },
+        {
+          "name": "记忆压缩",
+          "key": "memory",
+          "status": "ok",
+          "detail": "滑窗 k=3；pinned 合规约束仍在上下文：合规要求：任何回复都不得包含完整订单号，只能给后四位。",
+          "metrics": [
+            {
+              "label": "压缩后",
+              "value": "66 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens"
+            },
+            {
+              "label": "压缩前",
+              "value": "122 tokens",
+              "source": "m7_e2e.TicketResult.context_tokens_uncompacted"
+            },
+            {
+              "label": "节省",
+              "value": "56 tokens (46%)",
+              "source": "压缩前 - 压缩后"
+            },
+            {
+              "label": "pinned",
+              "value": 1,
+              "source": "memory_item.pinned"
+            },
+            {
+              "label": "会话轮次",
+              "value": 7,
+              "source": "memory_item.session_id"
+            }
+          ]
+        },
+        {
+          "name": "网关 / LLM",
+          "key": "gateway",
+          "status": "ok",
+          "detail": "model=qwen3:8b；route=default；cache_hit=False；degraded=False",
+          "metrics": [
+            {
+              "label": "prompt",
+              "value": "142 tokens",
+              "source": "gateway_request.prompt_tokens"
+            },
+            {
+              "label": "completion",
+              "value": "14 tokens",
+              "source": "gateway_request.completion_tokens"
+            },
+            {
+              "label": "耗时",
+              "value": "0 ms",
+              "source": "gateway_request.latency_ms"
+            },
+            {
+              "label": "成本",
+              "value": "$0.000000",
+              "source": "gateway_request.cost_usd"
+            },
+            {
+              "label": "网关记录",
+              "value": 1,
+              "source": "gateway_request.idempotency_key"
+            }
+          ]
+        },
+        {
+          "name": "失败分类",
+          "key": "classification",
+          "status": "ok",
+          "detail": "未分类失败 0",
+          "metrics": [
+            {
+              "label": "flags",
+              "value": "—",
+              "source": "m7_e2e.TicketResult.flags"
+            }
+          ]
+        },
+        {
+          "name": "回答",
+          "key": "answer",
+          "status": "ok",
+          "detail": "未查到该订单，请核对后四位。",
+          "metrics": [
+            {
+              "label": "回答长度",
+              "value": "14 字",
+              "source": "gateway_request.content"
+            }
+          ]
+        }
+      ],
+      "sources": {
+        "answer": {
+          "table": "gateway_request",
+          "field": "content",
+          "key": "T09-ok"
+        },
+        "gateway_status": {
+          "table": "gateway_request",
+          "field": "status",
+          "key": "T09-ok"
+        },
+        "tool_verdict": {
+          "table": "tool_audit",
+          "field": "verdict",
+          "key": "T09"
+        },
+        "pinned": {
+          "table": "memory_item",
+          "field": "pinned",
+          "key": "sess-T09"
+        },
+        "summary": {
+          "artifact": "results/m7_e2e.json#/summary"
+        }
+      }
+    }
+  ],
+  "boundaries": [
+    "工单只有 10 条、且是手写的，不是真实客服流量分布；端到端 p95 是描述统计，不构成 SLO。",
+    "离线模式的失败率（timeout 5% + 空回答 5%）是**脚本注入**的，不是 ollama 的真实可用率。",
+    "工具只做 order_id 精确查询，没有模糊匹配/多轮澄清；真实客服场景里「查不到」的比例会高得多。",
+    "没有用户侧反馈回路（工单是否解决），所以「成功」定义是「模型返回了非空内容」，不等于用户满意。",
+    "M6 的订单库是合成 2000 行，不是真实交易数据。"
+  ],
+  "verification": {
+    "status": "MATCH",
+    "checks": 36,
+    "mismatches": [],
+    "source": "results/m7_e2e.json"
+  }
+}
