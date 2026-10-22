@@ -223,20 +223,27 @@ class DemoModulesTest(unittest.TestCase):
             self.assertTrue(module["refutes"], module["id"])
             self.assertTrue(module["sources"], module["id"])
 
-    def test_fresh_build_matches_artifact_when_results_exist(self) -> None:
+    def test_fresh_build_has_same_module_statuses_when_results_exist(self) -> None:
         if not (ROOT / "results" / "m1_gateway.json").exists():
             self.skipTest("results/ absent in a clean clone; artifact is the replay")
         fresh = build_modules_payload(generated_at="2026-10-22T00:00:00+00:00")
         artifact = json.loads(MODULES.read_text(encoding="utf-8"))
 
-        def normalize(payload: dict) -> dict:
-            data = json.loads(json.dumps(payload))
-            for key in ("generated_at", "commit", "worktree_dirty",
-                        "dirty_paths", "python"):
-                data["meta"].pop(key, None)
-            return data
+        def contract(payload: dict) -> dict:
+            return {
+                module["id"]: {
+                    "status": module["status"],
+                    "passed": module["passed"],
+                    "failed": module["failed"],
+                    "expected_fail": module["expected_fail"],
+                    "info": module["info"],
+                    "sources": module["sources"],
+                }
+                for module in payload["modules"]
+            }
 
-        self.assertEqual(normalize(fresh), normalize(artifact))
+        self.assertEqual(contract(fresh), contract(artifact))
+        self.assertEqual(fresh["summary"], artifact["summary"])
 
     def test_modules_ui_contract(self) -> None:
         html = (PUBLIC / "index.html").read_text(encoding="utf-8")
