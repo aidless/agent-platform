@@ -1,5 +1,7 @@
 # agent-platform
 
+[**Live demo**](https://aidless.github.io/agent-platform/) · [Demo 文档](demo/README.md)
+
 企业 LLM 平台的十一个最小可运行模块。**零第三方依赖**：核心只用 Python 3.10+
 标准库 + SQLite；唯一的外部依赖是 M6 数据管道，它用 Docker 里的 PostgreSQL
 作为真实上游（不用 `psycopg2`，靠 `psql` + `\copy` CSV 管道）。
