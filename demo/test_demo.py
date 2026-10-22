@@ -41,6 +41,7 @@ def normalize(payload: dict) -> dict:
     data["meta"].pop("commit", None)
     data["meta"].pop("worktree_dirty", None)
     data["meta"].pop("dirty_paths", None)
+    data["meta"].pop("python", None)
     data["summary"].pop("latency_ms", None)
     for item in data["items"]:
         item.pop("latency_ms", None)
