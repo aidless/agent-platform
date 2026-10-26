@@ -1,0 +1,5 @@
+# aidless/agent-platform — no third-party runtime dependencies
+#
+# Verified by scanning all 29 Python files in this repo: every import resolves to
+# the standard library or to a module inside this repository.
+# Keep this file: it makes the absence of dependencies explicit instead of implicit.
