@@ -1,7 +1,7 @@
 {
   "milestone": "M9",
   "mode": "offline（ScriptedAgent 确定性动作序列，零 LLM 调用）",
-  "generated_at": 1792146695680,
+  "generated_at": 1793104878527,
   "reference_implementation": {
     "name": "SWE-agent/mini-swe-agent",
     "version": "v2",
