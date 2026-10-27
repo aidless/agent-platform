@@ -137,6 +137,17 @@ function selectedItem() {
   );
 }
 
+function preferredStartItem(items) {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  return (
+    items.find((item) => item.id === "T04") ||
+    items.find((item) => item.failure) ||
+    items.find((item) => item.llm_status === "degraded") ||
+    items.find((item) => item.tool_verdict === "denied") ||
+    items[0]
+  );
+}
+
 function renderDetail() {
   const item = selectedItem();
   if (!item) return;
@@ -419,7 +430,8 @@ async function rerun() {
     const payload = await response.json();
     state.payload = payload;
     if (!payload.items.some((item) => item.id === state.selectedId)) {
-      state.selectedId = payload.items[0] ? payload.items[0].id : null;
+      const preferred = preferredStartItem(payload.items);
+      state.selectedId = preferred ? preferred.id : null;
     }
     renderAll();
     status.textContent = `重跑完成 · ${new Date().toLocaleTimeString()}`;
@@ -437,7 +449,8 @@ async function init() {
     const response = await fetch("./runs.json", { cache: "no-store" });
     if (!response.ok) throw new Error(`runs.json HTTP ${response.status}`);
     state.payload = await response.json();
-    state.selectedId = state.payload.items[0] ? state.payload.items[0].id : null;
+    const preferred = preferredStartItem(state.payload.items);
+    state.selectedId = preferred ? preferred.id : null;
     renderAll();
 
     $("rerun").addEventListener("click", rerun);

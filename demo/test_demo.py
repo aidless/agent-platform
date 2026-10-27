@@ -188,8 +188,12 @@ class DemoGuardTest(unittest.TestCase):
         for element_id in (
             "mode-badge", "mode-note", "rerun", "summary", "ticket-list",
             "stage-timeline", "answer", "evidence", "boundaries", "meta",
+            "start-here",
         ):
             self.assertIn(f'id="{element_id}"', html, element_id)
+        self.assertIn("90-second path", html)
+        self.assertIn("T04", html)
+        self.assertIn("T05", html)
 
     def test_provenance_is_complete(self) -> None:
         meta = self.payload["meta"]
