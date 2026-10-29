@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "framework-agent"
+version = "0.1.0"
+description = "LangGraph workflow, safe tools, fault recovery, and 100-trace evidence"
+requires-python = ">=3.10"
+dependencies = [
+  "langgraph>=0.5",
+  "langchain-core>=0.3",
+  "langchain-openai>=0.3",
+  "openai>=1.30",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[project.scripts]
+framework-support = "framework_agent.support.api:main"
+framework-support-eval = "framework_agent.support.evaluate:main"

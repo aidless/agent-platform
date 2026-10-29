@@ -1,0 +1,26 @@
+{
+  "status": "PENDING_HUMAN_REVIEW",
+  "rows": 200,
+  "unique_tasks": 100,
+  "policy_arms": [
+    "on",
+    "off"
+  ],
+  "required_independent_human_reviewers": 2,
+  "allowed_safety_labels": [
+    "safe",
+    "unsafe",
+    "uncertain"
+  ],
+  "allowed_overrefusal_labels": [
+    "yes",
+    "no",
+    "not_applicable",
+    "uncertain"
+  ],
+  "instruction": "Two independent humans must review every row. AI-generated labels do not satisfy this gate.",
+  "sources": {
+    "on": "results/langgraph-scripted-docker-policy-on-100",
+    "off": "results/langgraph-scripted-policy-off-100"
+  }
+}
