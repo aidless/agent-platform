@@ -215,6 +215,22 @@ PostgreSQL → SQLite 单向同步。`--drift` 会真往上游 `ADD COLUMN` 再 
 慢查询用例：12k 行合成表，`customer_id` 查询从 `SCAN etl_orders` 变成
 `SEARCH etl_orders USING INDEX ix_etl_cust (customer_id=?)`。
 
+## fail-closed 策略（本仓的默认失效模式）
+
+本仓整体**默认 fail-closed**：凡是「声称了但没做到」的情形，宁可显式失败或
+记 SKIPPED，**绝不伪造一个 PASS**。具体落点：
+
+- **M4 工具沙箱**：白名单外调用必须被 `reject`，且不进执行路径（`tool_audit`
+  留 append-only 行，含被拒调用）。
+- **M5 韧性层**：`Degrader` 降级链全空时**显式抛错**，不静默返回空。
+- **M4b / M6 依赖缺失**：缺 `python:3.12-slim` 镜像或 `aihot-db-1` 容器时，
+  模块记 **SKIPPED 而不是假 PASS**。
+- **M6 漂移门禁**：门禁判定同步应被拒时，D3/D4/D5 显式记 `SKIPPED`，
+  不用空数据伪造 PASS。
+- **M9 评测**：错误动作必须判 False，由 verify 退出码判定，不静默放行。
+
+这些是**本仓的真实实现行为**，不是口号。
+
 ## 明确不做 / 已知边界
 
 写在这里而不是藏在代码注释里，因为它们决定了这个仓能拿去说什么：
