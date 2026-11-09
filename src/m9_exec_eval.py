@@ -12,9 +12,8 @@
     execution-based：model 输出动作（bash 命令）→ **真的执行** → 用验证命令的
                       **退出码**判定 → 对错由机器给，不由我给的字符串匹配
 
-这一步跨过去，评测的「裁判」从我的 matcher 换成了 shell 退出码，
-我再也无法用「判定口径」操纵结论——这正是我在 paper_workflow_kb 里
-证明过的问题（8.66% 的翻转来自 matcher 选择）的正面回应。
+这一步把裁判从字符串匹配换成 shell 退出码。verify 仍由本文件选定，
+所以口径仍然影响结论；这个限制写在 refutes 里，不写成已经解决。
 
 ## 与 mini-swe-agent 的关系
 
@@ -92,8 +91,10 @@ TASKS = [
     Task("T05", "多步组合（需要两步）",
          setup="rm -f result.txt; printf '1\\n2\\n' > a.txt; printf '3\\n' > b.txt",
          verify="test \"$(cat result.txt)\" = \"6\"",
+         # bash 算术，不调用 bc。bc 不是 Python 标准库，干净环境里经常没有。
          correct_actions=["cat a.txt b.txt > all.txt",
-                          "paste -sd+ all.txt | bc > result.txt"]),
+                          "s=0; while read -r n; do s=$((s + n)); done < all.txt; "
+                          "printf '%s\\n' \"$s\" > result.txt"]),
 ]
 
 
@@ -266,7 +267,8 @@ def main() -> int:
         mem_rows = conn.execute(
             "SELECT COUNT(*) c FROM memory_item").fetchone()["c"]
     out["memory_items"] = mem_rows
-    ok_e4 = mem_rows >= len(TASKS)
+    # 动作失败时会多写一行 FAIL。那一行不能再被 >= 收成 PASS。
+    ok_e4 = mem_rows == len(TASKS)
     findings.append(
         f"E4 记忆记账：{mem_rows} 条 memory_item（5 题各 1 条任务标记）"
         f" → {'PASS' if ok_e4 else 'FAIL'}")

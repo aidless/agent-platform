@@ -9,34 +9,37 @@
 cd agent-platform
 make help          # 列出所有命令与发现的模块
 make deps          # 依赖可用性自检（缺 docker/ollama 只影响对应模块）
-make smoke-offline # CI 同款：只跑不依赖外部服务的模块
-make gates         # smoke + 静态检查 + 证据扫描（本地全量）
+make smoke-offline # 只重跑 9 个离线模块；这是 gates 的一部分，不是整条 CI
+make gates         # 与 CI 相同：drift + 离线 smoke + 契约 + demo 测试；证据扫描不阻断
 make clean
 ```
 
 模块**不写死**：`Makefile` 用 `$(wildcard src/m[0-9]*.py)` 发现模块，
 新增 `src/m9_*.py` 后 `make` 自动纳入，不需要改 Makefile。
 
-## 2. 阶段划分（决定你能不能跑 M6）
+## 2. 阶段划分
 
-| 阶段 | 需要什么 | 能跑哪些 | 跑不了什么 |
+| 阶段 | 需要什么 | 跑哪些 | 不证明什么 |
 |---|---|---|---|
-| 离线 | python3 标准库 | `m1 m2 m3 m3b m4 m4b m5 m7 m8` | — |
-| 需 docker | docker 分页能力 | + `m6`（真 PostgreSQL 17） | live |
-| 需 ollama | ollama + ≥6G 可用显存 | + `m1 --live` / `m3b --live` | — |
+| 离线，也是 CI | Python 3.10+ 标准库 | `m1 m2 m3 m3b m4 m5 m7 m8 m9` 的 `--smoke`，共 9 个 | M4b、M6、任何 live 分数 |
+| 可选 docker | 本机已有 `python:3.12-slim`；另有一个已经在跑的容器 `aihot-db-1` | `m4b`，以及 `m6` / `m6 --drift` | 仓库不拉取镜像，也没有 compose |
+| 可选 ollama | 本机 ollama 与足够显存 | `m1 --live`、`m3b --live` | 显存不够时上游被杀，是环境限制 |
 
-**live 跑不了不是代码缺陷**：宿主机有 AIE 训练任务持续占 ~3.4G GPU，
-本仓清空 cgroup 也无法加载模型（详见 README 第 4 节边界）。
+`make smoke` 在缺 docker 时把 M4b / M6 记成 SKIP，不是 PASS。
 
 ## 3. CI 跑的是哪一档
 
-`.github/workflows/gates.yml` 只跑 `make smoke-offline`。
-理由：GitHub-hosted runner 没有 docker PostgreSQL、没有 ollama，
-把需要它们的模块放进去会得到**永远红的构建**——那比没有门禁更糟。
+`.github/workflows/gates.yml` 只跑 `make gates`。
+这条命令先对账已提交的 `results/*.json`，再跑 9 个离线模块、编译、
+结果契约和 demo 契约测试。
+
+GitHub-hosted runner 没有 `aihot-db-1`，也没有 ollama，仓库自己也不拉取
+`python:3.12-slim`。把这三样放进默认门禁会得到一台机器永远红、另一台
+机器靠缓存变绿的构建。所以它们留在可选路径。
 
 证据扫描作为**审计步骤**上传，不设 `exit 1`：
 它扫的是「声称的业绩数字是否都有证据」，命中数量多不代表代码错，
-只代表这些位置需要人工核对。本地 `make gates` 会打印摘要。
+只代表这些位置需要人工核对。`make gates` 会打印摘要。
 
 ## 4. 结果契约（results/*.json）
 
@@ -92,18 +95,19 @@ Python import 表。后果：`import docker`（Python SDK，本仓用不到）�
 
 这类 bug 不会让任何测试变红，只会让报告说谎——所以我把它记在这里，
 而不是删掉了当没发生过。
-- 不覆盖表格里的数字（只扫正文行）；
-- 有误报：论文里讨论「把 p95 优化到 X」的方法论段落也会命中。
+- 表格里的数字同样会命中；上面第 6 节已经说过，这里不再写成「不扫表格」。
+- 有误报：讨论「把 p95 优化到 X」的方法论段落也会命中。
 
 ## 7. 复现顺序指南（陌生人视角）
 
 ```bash
 git clone <repo> && cd agent-platform
-make smoke-offline     # 11 个模块里 10 个能跑，约 3-5 分钟
-# 想看 LLM 摘要（M3b）：需要能用的 ollama 与显存
-# 想看 OS 隔离（M4b）/ 数据管道（M6）：需要 docker
+make gates             # 对账已提交结果，并重跑 9 个离线模块
+# M4b：本机已有 python:3.12-slim 时再跑 src/m4b_os_sandbox.py --smoke
+# M6：已有容器 aihot-db-1 时再跑 src/m6_etl.py --smoke
+# live：有 ollama 时再跑 m1 --live / m3b --live
 ```
 
-`results/` 下的 JSON 是本仓跑出来的**实际输出**，不是示例；
-`results/` 被 `.gitignore` 排除，所以 clone 后是空的，重跑才有——
-这保证了任何人看到的数字都是自己机器上真实的。
+`results/*.json`（除 `evidence_scan*.json`）是提交进仓库的冻结证据，不是示例。
+克隆之后可以直接读。`make smoke-offline` 会重算离线模块，并改写墙钟字段；
+README 表里的加速比和 live 延迟以提交文件为准，不以你机器上的新秒数为准。

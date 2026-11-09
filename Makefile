@@ -1,103 +1,107 @@
 # ============================================================
 # agent-platform Makefile
 #
-# 设计原则与 README 一致：
-#   - 零第三方依赖，只用 POSIX shell + python3 标准库
-#   - 模块用 glob 发现（src/m[0-9]*.py），不写死清单
-#     —— 新增 m9_*.py 不用改这里
-#   - 区分 smoke（全部）与 smoke-offline（CI 用）
+# 零第三方依赖：POSIX make + python3 标准库。
+# 模块用 glob 发现（src/m[0-9]*.py），不写死 11 这个数字。
 #
-# 为什么 CI 只能跑离线档：
-#   m6 需要 docker 里的 PostgreSQL（aihot-db-1）；m1 --live / m3b --live
-#   需要本机 ollama 与可用显存。GitHub-hosted runner 三者都没有。
-#   把需要它们的模块放进 CI 只会得到永远红的构建，等于没有门禁。
+# 两条路径：
+#   smoke-offline / gates   CI 与陌生克隆的默认路径。不调用 docker、不调用 ollama。
+#   smoke                   额外尝试 M4b 与 M6。缺依赖时脚本打印「→ SKIPPED」并退出 0，
+#                           不把跳过记成 PASS，也不覆盖已提交的 PASS 结果。
+#   m1 --live / m3b --live  不在任何 make 目标里。需要本机 ollama。
 # ============================================================
 
 PY        ?= python3
 SRC_DIR   := src
 MODULES   := $(sort $(wildcard $(SRC_DIR)/m[0-9]*.py))
-# 需要真实外部依赖的模块：M6（docker+postgres）及其 drift 变体
-NEEDS_DOCKER := $(SRC_DIR)/m6_etl.py
+# 可选外部依赖。默认 CI 不跑它们。
+NEEDS_DOCKER := $(SRC_DIR)/m4b_os_sandbox.py $(SRC_DIR)/m6_etl.py
+OFFLINE := $(filter-out $(NEEDS_DOCKER),$(MODULES))
 
 .PHONY: help smoke smoke-offline gates scan clean deps demo demo-build demo-test
 
-## help: 默认 target，列出所有命令
+## help: 默认 target
 help:
 	@echo "agent-platform — 可用命令："
 	@echo ""
 	@echo "  make help           本页"
-	@echo "  make smoke          # 逐个跑所有模块 --smoke，任一失败则退出码非 0"
-	@echo "  make smoke-offline  # 只跑不依赖 docker 的模块（CI 用这个）"
-	@echo "  make gates          # smoke + 静态检查（compileall / 契约+绝对路径 / 证据扫描）"
-	@echo "  make scan           # 只跑跨仓无证据数字扫描"
-	@echo "  make clean          # 删 __pycache__ / *.pyc / 临时 db"
-	@echo "  make deps           # 打印依赖与可用性自检"
-	@echo "  make demo           # 启动 M7 工单链路 Demo（本地实时）"
-	@echo "  make demo-build     # 生成 demo/public/runs.json"
-	@echo "  make demo-test      # 跑 Demo 契约测试"
+	@echo "  make deps           依赖自检。docker / ollama 缺失不失败"
+	@echo "  make smoke-offline  只跑离线模块的 --smoke（CI 会重跑的那一组）"
+	@echo "  make gates          先做 claim drift（在 smoke 改写 results 之前），再 smoke-offline、"
+	@echo "                      编译、结果契约、demo 契约测试。证据扫描不阻断"
+	@echo "  make smoke          离线模块 + M4b + M6。缺 docker 时这两项记 SKIP，不是 PASS"
+	@echo "  make scan           无证据数字扫描（审计，不阻断）"
+	@echo "  make demo           启动 M7 本地 Demo"
+	@echo "  make demo-build     生成 demo/public/runs.json 与 modules.json"
+	@echo "  make demo-test      Demo 契约测试"
+	@echo "  make clean          删 __pycache__ / *.pyc / 临时 log"
 	@echo ""
-	@echo "发现的模块（$(words $(MODULES)) 个）："
+	@echo "发现的模块（$(words $(MODULES)) 个），其中离线 $(words $(OFFLINE)) 个："
 	@for m in $(MODULES); do echo "    $$m"; done
+	@echo "不在默认 CI 里："
+	@for m in $(NEEDS_DOCKER); do echo "    $$m"; done
 
-## smoke: 逐个跑所有模块
+define run_modules
+	fail=0; pass=0; skip=0; \
+	for m in $(1); do \
+	  log=/tmp/aplat_$$$$.log; \
+	  if timeout 600 $(PY) $$m --smoke >$$log 2>&1; then \
+	    if grep -q '→ SKIPPED' $$log; then \
+	      echo "  SKIP  $$m"; skip=$$((skip+1)); \
+	    else \
+	      echo "  PASS  $$m"; pass=$$((pass+1)); \
+	    fi; \
+	  else \
+	    echo "  FAIL  $$m  (exit $$?)"; tail -5 $$log; fail=$$((fail+1)); \
+	  fi; \
+	done; \
+	echo ""; echo "$(2): $$pass passed, $$skip skipped, $$fail failed"; \
+	[ $$fail -eq 0 ] || exit 1; \
+	$(3)
+endef
+
+## smoke: 全部模块。SKIP 不失败，也不计为 PASS。
 smoke:
-	@fail=0; pass=0; \
-	for m in $(MODULES); do \
-	  if timeout 600 $(PY) $$m --smoke >/tmp/aplat_$$$$.log 2>&1; then \
-	    echo "  PASS  $$m"; pass=$$((pass+1)); \
-	  else \
-	    echo "  FAIL  $$m  (exit $$?)"; tail -5 /tmp/aplat_$$$$.log; fail=$$((fail+1)); \
-	  fi; \
-	done; \
-	echo ""; echo "smoke: $$pass passed, $$fail failed"; \
-	[ $$fail -eq 0 ] || exit 1
+	@$(call run_modules,$(MODULES),smoke,true)
 
-## smoke-offline: 排除需要 docker/网络的模块
+## smoke-offline: 离线模块。出现 SKIP 也失败，因为这组不该跳过。
 smoke-offline:
-	@fail=0; pass=0; \
-	for m in $(filter-out $(NEEDS_DOCKER),$(MODULES)); do \
-	  if timeout 600 $(PY) $$m --smoke >/tmp/aplat_off_$$$$.log 2>&1; then \
-	    echo "  PASS  $$m"; pass=$$((pass+1)); \
-	  else \
-	    echo "  FAIL  $$m  (exit $$?)"; tail -5 /tmp/aplat_off_$$$$.log; fail=$$((fail+1)); \
-	  fi; \
-	done; \
-	echo ""; echo "smoke-offline: $$pass passed, $$fail failed"; \
-	[ $$fail -eq 0 ] || exit 1
+	@$(call run_modules,$(OFFLINE),smoke-offline,[ $$skip -eq 0 ])
 
-## gates: smoke + 静态检查
-##   检查逻辑放在 tools/ 下的独立脚本里，不写在 heredoc 里：
-##   Makefile recipe 每行是独立 shell，heredoc 的缩进/结束标记容易被
-##   Make 的 tab 规则吃掉（本次实测 heredoc 直接报
-##   `make: import: 没有那个文件或目录`）。脚本能单独跑、能进 CI、
-##   退出码语义干净，也能被 check_contract 的 --selftest 自证。
-gates: smoke
-	@echo ""
-	@echo "== 静态检查 =="
-	@$(PY) -m compileall -q $(SRC_DIR) && echo "  PASS  compileall"
+## gates: 与 CI 同一条命令。drift 必须在 smoke 之前，避免墙钟重跑改写已提交数字后再对账。
+gates:
+	@echo "== CI 覆盖 =="
+	@echo "覆盖：离线模块 --smoke、compileall、结果契约、claim drift、demo 契约测试。"
+	@echo "不覆盖：M4b（docker + 本地已有 python:3.12-slim）、M6（已在跑的容器 aihot-db-1）、m1/m3b --live（ollama）。"
+	@echo "证据扫描只上传审计，命中不失败。"
+	@$(PY) tools/check_drift.py --selftest
+	@$(PY) tools/check_drift.py
 	@$(PY) tools/check_contract.py
+	@$(MAKE) --no-print-directory smoke-offline
+	@$(PY) -m compileall -q $(SRC_DIR) demo tools
+	@$(PY) -m unittest demo/test_demo.py
 	@$(MAKE) --no-print-directory scan
+	@echo "gates: 离线检查结束。docker 与 ollama 路径没有运行。"
 
-## scan: 跨仓无证据数字扫描（审计，不阻断）
+## scan: 审计，不阻断
 scan:
-	@$(PY) tools/evidence_scan.py . \
-	   --json results/evidence_scan.json 2>&1 | tail -20
+	@$(PY) tools/evidence_scan.py . --json results/evidence_scan.json > /tmp/aplat_scan.txt 2>&1 || true
+	@tail -20 /tmp/aplat_scan.txt
+	@echo "evidence scan is audit-only and does not fail gates"
 
-## deps: 依赖与可用性自检
-##   单独放 tools/deps_check.py 而不是 heredoc：Makefile 的 heredoc 会被
-##   $(...) 与制表符规则折腾，出错难查；文件能单独跑、能进 CI、能有 --help
+## deps: 只读探测
 deps:
 	@$(PY) tools/deps_check.py
 
-## demo: 启动本地 Demo（静态页 + /api/run 实时重跑）
+## demo: 本地实时重跑 M7
 demo:
 	@$(PY) demo/server.py
 
-## demo-build: 生成静态回放 payload，并与 results/m7_e2e.json 对账
+## demo-build: 静态回放
 demo-build:
 	@$(PY) demo/build_static.py
 
-## demo-test: Demo 契约测试（stdlib only）
+## demo-test
 demo-test:
 	@$(PY) -m unittest demo/test_demo.py -v
 
@@ -105,5 +109,5 @@ demo-test:
 clean:
 	@find . -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
 	@find . -name '*.pyc' -delete 2>/dev/null || true
-	@rm -f /tmp/aplat_*.log
+	@rm -f /tmp/aplat_*.log /tmp/aplat_scan.txt
 	@echo "cleaned"

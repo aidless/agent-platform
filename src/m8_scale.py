@@ -157,12 +157,11 @@ def q2_index_growth(db: Path, sizes: list[int]) -> list[dict]:
 # ---------------------------------------------------------------- Q3 成本
 
 def q3_cost(tokens_in: int, tokens_out: int, per_day: int,
-            days: int = 30) -> dict:
-    """把已实测的 token 用量按外部价格折算月度成本。
+            days: int = 30, source: str = "") -> dict:
+    """把调用方给出的 token 用量按外部价格折算月度成本。
 
-    tokens_in/out 取自本仓真实落盘（M1 live: prompt_sum=1298 / completion_sum=149；
-    M7: prompt_sum=1298 / completion_sum=149）。本机模型单价 0，所以
-    这里报的是「同样用量若上云会花多少」，不是本机的花费。
+    本机模型单价 0，所以这里报的是「同样用量若上云会花多少」，不是本机花费。
+    ``source`` 必须只点名本次真正读到 ``summary.tokens`` 的文件。
     """
     monthly_in = tokens_in * per_day * days / 1_000.0
     monthly_out = tokens_out * per_day * days / 1_000.0
@@ -176,7 +175,7 @@ def q3_cost(tokens_in: int, tokens_out: int, per_day: int,
                       "tokens_out_per_req": tokens_out,
                       "requests_per_day": per_day, "days": days,
                       "月请求数": per_day * days},
-            "source": "tokens 来自 results/m1_gateway_live.json 与 results/m7_e2e.json 实测",
+            "source": source,
             "monthly_in_k": round(monthly_in, 1),
             "monthly_out_k": round(monthly_out, 1),
             "plans": rows}
@@ -185,10 +184,9 @@ def q3_cost(tokens_in: int, tokens_out: int, per_day: int,
 def read_measured_tokens() -> dict:
     """从落盘结果取**分模块**的实测 token，并把分母一起带回。
 
-    修为什么改：初版把 m1_gateway_live.json（n=3）与 m7_e2e.json（n=10）
-    的 token_sum 直接相加成单一 1298/149「per req」，那是两个不同分母的合计，
-    拿来按「每请求」外推会**低估**成本。现在改成逐模块返回，Q3 按最保守的
-    n=10 那组算，并把两个来源都写进结果。
+    初版把两个文件的 token 合计加成同一个「每请求」数字，分母并不相同。
+    现在只收录带 ``summary.tokens`` 的文件。已提交的 m1 live 结果没有这个
+    字段，所以不会进入月成本。
     """
     out: dict[str, dict] = {}
     for name, reqs in (("m1_gateway_live.json", 3), ("m7_e2e.json", 10)):
@@ -247,15 +245,25 @@ def main() -> int:
 
     # ---- Q3 成本 ----
     measured = read_measured_tokens()
-    if not measured:
-        cost = {"basis": None, "note": "无可实测 token；拒绝编造"}
-        out["cost"] = cost
-        findings.append("Q3 成本推演：未找到实测 token（需先跑 m1 --live 与 m7）"
-                        "→ SKIPPED（不是 PASS），拒绝用估计值外推")
+    if "m7_e2e.json" not in measured:
+        out["cost"] = {
+            "basis": {"sources": measured},
+            "note": "m7_e2e.json 没有 summary.tokens；拒绝编造月成本",
+        }
+        findings.append(
+            "Q3 成本推演：m7_e2e.json 缺少 summary.tokens"
+            "→ SKIPPED（不是 PASS），拒绝用估计值外推")
     else:
+        priced = "m7_e2e.json"
+        others = [name for name in measured if name != priced]
+        source = f"月成本只按 {priced} 的 token 合计外推。"
+        if others:
+            source += "同时读到但没有拿来乘价格的文件：" + "、".join(others) + "。"
+        else:
+            source += "没有 summary.tokens 的文件不计入。"
         cost = q3_cost(measured["m7_e2e.json"]["prompt_sum"],
                        measured["m7_e2e.json"]["completion_sum"],
-                       per_day=1_000)
+                       per_day=1_000, source=source)
         cost["basis"]["sources"] = measured
         out["cost"] = cost
         cheapest = min(cost["plans"], key=lambda r: r["monthly_usd"])
@@ -289,11 +297,14 @@ def main() -> int:
             "与调度影响）。实测连跑三次：并发 rps 126.1/140.4/145.0，"
             "100k 档加速 38.81/41.62/40.53。加速比在 38×–47× 间浮动，"
             "1k 档最不稳（3.83→7.51，因为小表上 SCAN 本身就快）。"
+            "3.83→7.51 与 38×–47× 是这三次墙钟记录，不是本文件 Q2 那一行的加速数组；"
+            "10k 档没有记录过区间。"
             "所以这些数字是「数量级与计划变化」，不是可复现的精确倍数。",
             "Q3 用 gpt-4o-mini / claude-haiku / qwen-plus 三个价目做区间，"
             "未含企业折扣、批处理折扣、上下文缓存折扣，会**高估**月成本。",
-            "Q3 的 token 用量取自本仓自己跑的两个模块，不是生产流量；"
-            "客服场景会有长上下文，实际 in token 会显著更高。",
+            "Q3 的 token 用量只来自本次读到 summary.tokens 的文件：m7_e2e.json。"
+            "没有该字段的文件不会进入合计。这不是生产流量；"
+            "客服长上下文会让 input token 更高。",
             "本机现金成本记为 0，但没算电费、GPU 折旧与机时成本。",
         ],
         "results": out,

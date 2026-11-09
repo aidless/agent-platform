@@ -2,13 +2,26 @@
   "meta": {
     "repo": "agent-platform",
     "demo": "module-evidence",
-    "commit": "e993d31",
-    "worktree_dirty": false,
-    "dirty_paths": [],
-    "generated_at": "2026-10-22T07:47:24+00:00",
+    "commit": "106f0f9",
+    "worktree_dirty": true,
+    "dirty_paths": [
+      ".github/workflows/gates.yml",
+      "Makefile",
+      "README.md",
+      "demo/README.md",
+      "demo/modules_adapter.py",
+      "demo/pipeline_adapter.py",
+      "demo/public/app.js",
+      "demo/public/index.html",
+      "demo/test_demo.py",
+      "docs/engineering.md",
+      "results/m1_gateway.json",
+      "results/m3b_llm_summary.json"
+    ],
+    "generated_at": "2026-11-09T18:09:29+00:00",
     "mode": "result-replay",
     "python": "3.12.3",
-    "note": "M1–M9 结果回放：results/ 是本地生成物、不入库；公开页回放已提交的 modules.json。"
+    "note": "M1–M9 结果回放：公开页展示已提交的 results/*.json。CI 不重跑 M4b、M6 和 ollama live。"
   },
   "summary": {
     "modules": 11,
@@ -33,7 +46,7 @@
       "findings": [
         "幂等重放：首条 ok / 重放 cached，重放 token=0 成本=$0.000000（期望 0）→ PASS",
         "模型解析：请求 model=llama3.2:3b（route primary=qwen3:8b 的 fallback），实际使用=llama3.2:3b → PASS。修前该字段被无声丢弃（live 实测：curl 请求 3b、服务用了 8b）。",
-        "静默失败检测：thinking 型模型的空 content 被标记为 status=empty / error_kind=empty_content / done_reason=length / thinking≈121 tokens → PASS。修前会被记成 status=ok（live 实测：qwen3:8b 空回答 29.5s）",
+        "静默失败检测：thinking 型模型的空 content 被标记为 status=empty / error_kind=empty_content / done_reason=length / thinking≈121 tokens → PASS。修前会被记成 status=ok（live 记录在 results/m1_gateway_live.json，本次 smoke 不复测）",
         "记账：3 行，合计 21 tokens、$0.000000（本机模型单价 0，外部价仅作对照口径）",
         "降级：timeout 时降级到 fallback，仍失败 → status=error http=502 degraded=True → PASS",
         "熔断：阈值 3，5 次请求实际打到上游 3 次（期望 3，其余被 circuit_open 拦截）→ PASS；当前状态 open"
@@ -118,7 +131,7 @@
       "refutes": [
         "本模式的「LLM 摘要」是假上游，只验证控制流与指标口径，不说明真模型摘要质量。",
         "golden 命中是词面包含（substring），不是语义等价。",
-        "样本是单个 6 轮会话，不能外推。"
+        "样本是单个 10 轮会话，不能外推。"
       ],
       "sources": [
         "results/m3b_llm_summary.json"
@@ -144,7 +157,7 @@
         "P4 退避：4 次尝试间 3 次 sleep=[0.01, 0.02, 0.02]（确定性无 jitter，总墙钟 0ms）→ PASS"
       ],
       "refutes": [
-        "沙箱是进程内白名单 + 参数校验，不是 OS 级隔离；真实沙箱应用 seccomp/容器/独立用户，本仓未实现，因此 rm_rf/net.fetch 的拒绝只是策略层，不是安全边界。",
+        "这一层是进程内白名单 + 参数校验，不是 OS 级隔离。容器实验在 M4b，而且只在本机已有 docker 与 python:3.12-slim 时才跑；它不覆盖容器逃逸。本模块拒绝 rm_rf/net.fetch 只是策略层，不是安全边界。",
         "「重试后可恢复」用的是本地假上游，不证明对真实 503 有效。",
         "tool_audit 是单表 append-only，没有做防篡改哈希链；只做到可查，没做到不可抵赖。"
       ],
@@ -169,7 +182,7 @@
         "I4 权限收敛（--cap-drop ALL）：/proc/self/status CapEff=0000000000000000（全 0 才通过）→ PASS",
         "I5 内存上限（--memory 64m）：申请 300MiB → exit=137 oom=True out='' → PASS",
         "I6 进程数上限（--pids-limit 32）：fork 200 次 → exit=0 out='BLOCKED BlockingIOError 31' → PASS",
-        "I7 时间上限（外部 timeout=8s + docker rm -f）：死循环 → timed_out=True，用时 8230ms → PASS",
+        "I7 时间上限（外部 timeout=8s + docker rm -f）：死循环 → timed_out=True，用时 8290ms → PASS",
         "无残留容器：超时路径 kill 后 docker ps -a 里 aplat-sbx-* 数量=0 [] → PASS"
       ],
       "refutes": [
@@ -238,10 +251,10 @@
         "aplat_etl 是本次新建的独立库，不碰已有的 aihot 数据；但 Docker exec 仍需宿主机 docker 权限，不是纯本地。",
         "同步用 psql \\copy 的 CSV 管道，未处理 NULL 语义转换与二进制列；生产管道应换 psycopg2 或 COPY TO STDOUT BINARY。",
         "慢查询数据是 12k 行合成表，只能证明『索引改变查询计划』，给不出真实数据量下的绝对耗时。",
-        "schema 指纹只覆盖列名+类型，不覆盖约束、索引、默认值；上游加一条 CHECK 约束不会被本门禁发现。",
+        "同步门禁（D2）哈希的是 v1：列名+类型。D2b 显示 v2（可空、默认值、索引定义、约束定义）能发现「只加索引」，但 v2 没有接到拒同步判定；加索引或 CHECK 仍不会拦住同步。",
         "aplat_etl 是本次新建的独立库，不碰已有的 aihot 数据。",
         "漂移用例靠 ADD/DROP COLUMN 注入；已用 DROP 清理，但 ALTER 会让表短暂不可用，生产上应先在从库演练。",
-        "指纹只覆盖列名+类型，不覆盖约束/索引/默认值。"
+        "本次拒同步用的是 v1 指纹（列名+类型）。v2 能反映索引和约束变化，但不是这次拒同步的条件。"
       ],
       "sources": [
         "results/m6_etl.json",
@@ -287,16 +300,16 @@
       "expected_fail": 0,
       "info": 1,
       "findings": [
-        "Q1 并发：24 请求，串行 vs 8 并发 → 串行 19.6 rps（p50=20.0ms），并发 40.8 rps（p50=20.0ms）；上游调用数 24→24（要求等于请求数，证明没有放大） → PASS",
-        "Q2 索引规模：1k/10k/100k 三档，无索引全为 SCAN（1000,10000,100000）；加 customer_id 索引后全部转 USING INDEX；三档加速 [7.18, 13.28, 36.92]（100k 档无索引 4.963ms → 有索引 0.134ms） → PASS",
+        "Q1 并发：24 请求，串行 vs 8 并发 → 串行 26.7 rps（p50=20.0ms），并发 104.1 rps（p50=20.0ms）；上游调用数 24→24（要求等于请求数，证明没有放大） → PASS",
+        "Q2 索引规模：1k/10k/100k 三档，无索引全为 SCAN（1000,10000,100000）；加 customer_id 索引后全部转 USING INDEX；三档加速 [5.48, 22.44, 42.01]（100k 档无索引 7.802ms → 有索引 0.186ms） → PASS",
         "Q3 成本推演：全部用 results/m7_e2e.json 的实测 token（10 个工单，prompt_sum=1298 / completion_sum=149），1k 请求/天×30 天 → 最便宜 qwen-plus(阿里) $5.81/月、最贵 claude-3-5-haiku $49.03/月（差 8.4×）；本机执行同用量现金成本 $0。注意：这是「同样用量上云」的对照，不是本机花费。"
       ],
       "refutes": [
         "Q1 的上游是 sleep(20ms) 的假桩，不是真模型延迟；它刻画的是「网关自身是否成为瓶颈」，不含网络往返与首 token 时间。",
         "Q2 的三档行数（1k/10k/100k）是合成数据，SQLite 查询计划在真实数据分布（倾斜、热点 customer_id）下可能不同。",
-        "Q1 的 rps 与 Q2 的加速比**每次跑都不一样**（墙钟计时，受机器噪声与调度影响）。实测连跑三次：并发 rps 126.1/140.4/145.0，100k 档加速 38.81/41.62/40.53。加速比在 38×–47× 间浮动，1k 档最不稳（3.83→7.51，因为小表上 SCAN 本身就快）。所以这些数字是「数量级与计划变化」，不是可复现的精确倍数。",
+        "Q1 的 rps 与 Q2 的加速比**每次跑都不一样**（墙钟计时，受机器噪声与调度影响）。实测连跑三次：并发 rps 126.1/140.4/145.0，100k 档加速 38.81/41.62/40.53。加速比在 38×–47× 间浮动，1k 档最不稳（3.83→7.51，因为小表上 SCAN 本身就快）。3.83→7.51 与 38×–47× 是这三次墙钟记录，不是本文件 Q2 那一行的加速数组；10k 档没有记录过区间。所以这些数字是「数量级与计划变化」，不是可复现的精确倍数。",
         "Q3 用 gpt-4o-mini / claude-haiku / qwen-plus 三个价目做区间，未含企业折扣、批处理折扣、上下文缓存折扣，会**高估**月成本。",
-        "Q3 的 token 用量取自本仓自己跑的两个模块，不是生产流量；客服场景会有长上下文，实际 in token 会显著更高。",
+        "Q3 的 token 用量只来自本次读到 summary.tokens 的文件：m7_e2e.json。没有该字段的文件不会进入合计。这不是生产流量；客服长上下文会让 input token 更高。",
         "本机现金成本记为 0，但没算电费、GPU 折旧与机时成本。"
       ],
       "sources": [
@@ -333,10 +346,11 @@
     }
   ],
   "boundaries": [
-    "这些是本地 results/*.json 的回放，不是公开页实时重跑；M7 有一个独立的代码生成页。",
+    "这些是已提交 results/*.json 的回放，不是公开页实时重跑；M7 有一个独立的代码生成页。",
     "findings/refutes 是各模块自己声明的断言与边界，不是外部审计结论。",
-    "M6 需要 Docker；M1/M3b 的 live 路径需要本机 ollama；本页不重跑它们。",
-    "11 个模块里有 10 个能离线跑（M6 除外）；这不等于 11 个都在生产环境验证过。"
+    "M4b 需要本机已有的 python:3.12-slim；M6 需要已在跑的容器 aihot-db-1。本页不重跑它们。",
+    "M1/M3b 的 live 路径需要本机 ollama。离线 CI 重跑 9 个模块，不重跑这两条 live 路径。",
+    "11 个模块不是一个生产平台，也没有外部用户。"
   ],
   "verification": {
     "status": "MATCH",

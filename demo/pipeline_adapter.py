@@ -53,9 +53,8 @@ def _git_snapshot() -> tuple[str, bool, list[str]]:
             ["git", "status", "--porcelain"],
             cwd=ROOT, text=True, stderr=subprocess.DEVNULL,
         ).splitlines()
-        # results/ are generated artifacts and runs.json is the artifact this
-        # script writes; neither should make the demo's source tree look dirty.
-        ignored = ("results/", "demo/public/runs.json")
+        # runs.json is the artifact this script writes.
+        ignored = ("demo/public/runs.json",)
         dirty_paths = [
             line[3:] for line in raw
             if len(line) > 3 and not line[3:].startswith(ignored)
@@ -249,14 +248,13 @@ def _item_payload(result: TicketResult, db: Path) -> dict:
 def _verify(summary: dict, results: list[TicketResult]) -> dict:
     """Compare the fresh run with the committed M7 result file.
 
-    ``results/`` is gitignored, so a clean clone may not have the file. In that
-    case this is ``NOT_AVAILABLE`` rather than a failure; the demo itself is
-    still generated from code.
+    ``results/m7_e2e.json`` is committed. A missing file means the checkout is
+    incomplete; the demo can still be generated from code, and the status says so.
     """
     path = ROOT / "results" / "m7_e2e.json"
     if not path.exists():
         return {"status": "NOT_AVAILABLE",
-                "detail": "results/m7_e2e.json 不存在；Demo 仍由当前代码生成。",
+                "detail": "results/m7_e2e.json 不在工作区；已提交的仓库里应该有这份文件。",
                 "source": "results/m7_e2e.json"}
     previous = json.loads(path.read_text(encoding="utf-8"))
     old_summary = previous.get("summary", {})

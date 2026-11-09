@@ -17,18 +17,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-# 模块级依赖：缺了只是某些模块跑不了，不影响其余
+# 离线 smoke 不需要下面任何一项。docker 标成 required 会让没有
+# Docker 的机器在 `make deps` 上失败，好像默认路径跑不起来。
 #
 # 注意（这里栽过一次）：M4b 调的是 `docker` **命令行**（subprocess），
 # 不是 Python 的 docker SDK。所以 docker 只在 OPTIONAL_CLI 里出现一次；
 # 下面不要再放 ("docker", ...)，否则 `import docker` 失败会被误报成
 # "docker 不可用"，看着像环境坏了，其实只是没装那个用不到的 SDK。
-OPTIONAL_PY = [
-    ("numpy", "m2 分位数、m8 统计"),
-]
 OPTIONAL_CLI = [
-    ("docker", "M4b OS 级隔离 / M6 数据管道", True),
-    ("ollama", "m1 --live / m3b --live（可选）", False),
+    ("docker",
+     "可选。M4b 需要本机已有 python:3.12-slim；M6 需要已在跑的容器 aihot-db-1。"
+     "本仓库不拉取镜像，也没有 compose 文件。",
+     False),
+    ("ollama", "可选：m1 --live / m3b --live", False),
 ]
 
 
@@ -47,15 +48,7 @@ def main() -> int:
             print(f"  MISS  {name:<8} [{tag}] — {why}")
             (hard_missing if required else soft_missing).append(name)
 
-    print("\nPython 模块（全部可选）：")
-    for item in OPTIONAL_PY:
-        name, why = item[0], item[1]
-        try:
-            __import__(name)
-            print(f"  OK    {name:<8} — {why}")
-        except ImportError:
-            print(f"  MISS  {name:<8} — {why}")
-            soft_missing.append(name)
+    print("\nPython 第三方包：当前入口模块不 import。缺 numpy 不影响 smoke。")
 
     print("\nstdlib 模块（必须全部可用，否则本仓不成立）：")
     for name in ("sqlite3", "json", "subprocess", "tempfile", "hashlib",
@@ -72,11 +65,11 @@ def main() -> int:
         print(f"缺 {len(soft_missing)} 个可选项：{', '.join(soft_missing)}")
         print("  → 对应能力跑不了，其余模块照常；这不是代码缺陷。")
 
-    # required 项缺失返回非 0（CI 会拦）；optional 缺失不拦。
+    # 标准库缺失才返回非 0。docker / ollama 缺失不拦离线路径。
     if hard_missing:
-        print(f"缺必需项：{', '.join(hard_missing)} → 不能声称可复现")
+        print(f"缺必需项：{', '.join(hard_missing)} → 离线 smoke 跑不起来")
         return 2
-    print("结论：当前环境可复现除上述 optional 能力外的全部模块。")
+    print("结论：标准库齐全，可以跑离线 smoke。docker / ollama 缺失只影响可选路径。")
     return 0
 
 

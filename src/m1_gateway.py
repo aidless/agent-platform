@@ -113,7 +113,8 @@ def run_smoke() -> dict:
         f"status={r_t.status} / error_kind={r_t.error_kind} / "
         f"done_reason={r_t.done_reason} / thinking≈{r_t.thinking_tokens} tokens"
         f" → {'PASS' if ok_empty else 'FAIL'}"
-        f"。修前会被记成 status=ok（live 实测：qwen3:8b 空回答 29.5s）")
+        f"。修前会被记成 status=ok（live 记录在 results/m1_gateway_live.json，"
+        f"本次 smoke 不复测）")
 
     # --- 2) 记账完整性 ------------------------------------------------
     with C.db(db) as conn:
