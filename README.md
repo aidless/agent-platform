@@ -1,5 +1,7 @@
 # agent-platform
 
+[![CI](https://github.com/aidless/agent-platform/actions/workflows/gates.yml/badge.svg)](https://github.com/aidless/agent-platform/actions/workflows/gates.yml)
+
 [**Live demo**](https://aidless.github.io/agent-platform/) · [Demo 文档](demo/README.md)
 
 企业 LLM 平台的十一个最小可运行模块。**零第三方依赖**：核心只用 Python 3.10+
