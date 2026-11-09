@@ -2,23 +2,10 @@
   "meta": {
     "repo": "agent-platform",
     "demo": "module-evidence",
-    "commit": "106f0f9",
-    "worktree_dirty": true,
-    "dirty_paths": [
-      ".github/workflows/gates.yml",
-      "Makefile",
-      "README.md",
-      "demo/README.md",
-      "demo/modules_adapter.py",
-      "demo/pipeline_adapter.py",
-      "demo/public/app.js",
-      "demo/public/index.html",
-      "demo/test_demo.py",
-      "docs/engineering.md",
-      "results/m1_gateway.json",
-      "results/m3b_llm_summary.json"
-    ],
-    "generated_at": "2026-11-09T18:09:29+00:00",
+    "commit": "9e30190",
+    "worktree_dirty": false,
+    "dirty_paths": [],
+    "generated_at": "2026-11-09T18:11:58+00:00",
     "mode": "result-replay",
     "python": "3.12.3",
     "note": "M1–M9 结果回放：公开页展示已提交的 results/*.json。CI 不重跑 M4b、M6 和 ollama live。"
