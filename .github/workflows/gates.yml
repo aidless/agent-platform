@@ -7,11 +7,13 @@ on:
 
 jobs:
   offline-gates:
-    # CI 只跑离线档。理由（与 Makefile 注释一致）：
-    #   M6 需要 docker 里的 PostgreSQL（aihot-db-1）
-    #   m1 --live / m3b --live 需要本机 ollama + 可用显存
-    #   GitHub-hosted runner 三者都没有。把需要它们的模块放进 CI
-    #   只会得到永远红的构建 —— 那比没有门禁更糟。
+    # 这个徽章只表示离线门禁。它不表示生产可用，也不表示 Docker / ollama 路径跑过。
+    # 覆盖：9 个离线模块的 --smoke、compileall、results 契约、
+    #       README/demo 与 results/*.json 的 claim drift、demo 契约测试。
+    # 不覆盖：M4b（需要本机已有 python:3.12-slim，仓库不拉取镜像）、
+    #         M6（需要已经在跑的容器 aihot-db-1，仓库没有 compose）、
+    #         m1 --live / m3b --live（需要本机 ollama）。
+    # 证据扫描是审计，命中不失败。
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -21,29 +23,15 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: deps (none required)
-        run: python3 -c "import sys; print(sys.version)"
+      - name: deps (stdlib only; docker and ollama are optional)
+        run: python3 tools/deps_check.py
 
-      - name: make smoke-offline
-        run: make smoke-offline
-
-      - name: demo contract tests
-        run: python3 -m unittest demo/test_demo.py -v
-
-      - name: static checks
-        run: |
-          python3 -m compileall -q src && echo "compileall OK"
-          python3 tools/check_contract.py
-
-      - name: evidence scan (audit only, non-blocking)
-        run: |
-          python3 tools/evidence_scan.py . --json results/evidence_scan_ci.json || true
-          echo "→ 有命中不阻断：这是审计清单，不是判决（见 docs/engineering.md）"
-          echo "→ 判断规则：命中数 > 0 不代表代码错，只代表这些位置需要人工核对。"
+      - name: make gates
+        run: make gates
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: evidence-scan
-          path: results/evidence_scan_ci.json
+          path: results/evidence_scan.json
           if-no-files-found: warn

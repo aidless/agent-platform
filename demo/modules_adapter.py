@@ -1,8 +1,8 @@
 """Build the M1-M9 module evidence payload.
 
-``results/`` is gitignored in agent-platform; this adapter freezes those local
-result files into a committed ``modules.json`` replay. The M7 page is generated
-from code; this page is generated from the result artifacts and says so.
+``results/*.json`` for the eleven modules is committed evidence.
+``modules.json`` is a replay of those files, not a second measurement.
+The M7 page is generated from code; this page is generated from the artifacts.
 """
 
 from __future__ import annotations
@@ -88,8 +88,7 @@ def _git_snapshot() -> tuple[str, bool, list[str]]:
             ["git", "status", "--porcelain"],
             cwd=ROOT, text=True, stderr=subprocess.DEVNULL,
         ).splitlines()
-        ignored = ("results/", "demo/public/modules.json",
-                   "demo/public/runs.json")
+        ignored = ("demo/public/modules.json", "demo/public/runs.json")
         dirty_paths = [
             line[3:] for line in raw
             if len(line) > 3 and not line[3:].startswith(ignored)
@@ -149,17 +148,18 @@ def build_modules_payload(generated_at: str | None = None) -> dict:
             "mode": "result-replay",
             "python": __import__("sys").version.split()[0],
             "note": (
-                "M1–M9 结果回放：results/ 是本地生成物、不入库；"
-                "公开页回放已提交的 modules.json。"
+                "M1–M9 结果回放：公开页展示已提交的 results/*.json。"
+                "CI 不重跑 M4b、M6 和 ollama live。"
             ),
         },
         "summary": counts,
         "modules": modules,
         "boundaries": [
-            "这些是本地 results/*.json 的回放，不是公开页实时重跑；M7 有一个独立的代码生成页。",
+            "这些是已提交 results/*.json 的回放，不是公开页实时重跑；M7 有一个独立的代码生成页。",
             "findings/refutes 是各模块自己声明的断言与边界，不是外部审计结论。",
-            "M6 需要 Docker；M1/M3b 的 live 路径需要本机 ollama；本页不重跑它们。",
-            "11 个模块里有 10 个能离线跑（M6 除外）；这不等于 11 个都在生产环境验证过。",
+            "M4b 需要本机已有的 python:3.12-slim；M6 需要已在跑的容器 aihot-db-1。本页不重跑它们。",
+            "M1/M3b 的 live 路径需要本机 ollama。离线 CI 重跑 9 个模块，不重跑这两条 live 路径。",
+            "11 个模块不是一个生产平台，也没有外部用户。",
         ],
         "verification": {
             "status": "MATCH" if all(c["ok"] for c in checks) else "PARTIAL",

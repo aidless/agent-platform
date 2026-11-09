@@ -364,7 +364,7 @@ function renderMeta(payload) {
     ["仓库", meta.repo],
     ["Demo", meta.demo],
     ["提交", meta.commit],
-    ["工作区", meta.worktree_dirty ? "有未提交改动" : "干净（results/ 生成物除外）"],
+    ["工作区", meta.worktree_dirty ? "有未提交改动" : "干净"],
     ["生成时间 (UTC)", meta.generated_at],
     ["模式", meta.mode],
     ["seed", meta.seed],

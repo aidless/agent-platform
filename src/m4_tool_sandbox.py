@@ -185,9 +185,9 @@ def main() -> int:
         "generated_at": C.now_ms_wall(),
         "findings": findings,
         "refutes": [
-            "沙箱是进程内白名单 + 参数校验，不是 OS 级隔离；"
-            "真实沙箱应用 seccomp/容器/独立用户，本仓未实现，"
-            "因此 rm_rf/net.fetch 的拒绝只是策略层，不是安全边界。",
+            "这一层是进程内白名单 + 参数校验，不是 OS 级隔离。"
+            "容器实验在 M4b，而且只在本机已有 docker 与 python:3.12-slim 时才跑；"
+            "它不覆盖容器逃逸。本模块拒绝 rm_rf/net.fetch 只是策略层，不是安全边界。",
             "「重试后可恢复」用的是本地假上游，不证明对真实 503 有效。",
             "tool_audit 是单表 append-only，没有做防篡改哈希链；"
             "只做到可查，没做到不可抵赖。",

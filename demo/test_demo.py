@@ -229,7 +229,7 @@ class DemoModulesTest(unittest.TestCase):
 
     def test_fresh_build_has_same_module_statuses_when_results_exist(self) -> None:
         if not (ROOT / "results" / "m1_gateway.json").exists():
-            self.skipTest("results/ absent in a clean clone; artifact is the replay")
+            self.skipTest("results/m1_gateway.json missing; committed evidence should be present")
         fresh = build_modules_payload(generated_at="2026-10-22T00:00:00+00:00")
         artifact = json.loads(MODULES.read_text(encoding="utf-8"))
 

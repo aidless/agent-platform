@@ -1,246 +1,149 @@
 # agent-platform
 
+解决的是：把网关、工具沙箱、记忆压缩和一条离线工单链路做成 11 个能单独重跑的教学模块；核心依赖只有 Python 3.10+ 标准库和 SQLite，数字以已提交的 `results/*.json` 为准。
+不解决：生产接入、真实模型质量、SLO、外部用户，也不是一个做深的单一产品。`framework-agent/` 是另一次离线练习，不算这 11 个模块已经合成平台。
+STATUS: WORK-IN-PROGRESS — not A yet。包版本 0.1.0，成熟度停在教学作品。缺口写在 [FAILURE_MODES.md](FAILURE_MODES.md)。
+
 [![CI](https://github.com/aidless/agent-platform/actions/workflows/gates.yml/badge.svg)](https://github.com/aidless/agent-platform/actions/workflows/gates.yml)
 
-[**Live demo**](https://aidless.github.io/agent-platform/) · [Demo 文档](demo/README.md)
+这枚徽章只表示 [`.github/workflows/gates.yml`](.github/workflows/gates.yml) 的离线门禁通过。它不是覆盖率徽章，也不是 PyPI 或 star 计数。CI 重跑 9 个离线模块的 `--smoke`，外加编译、结果契约、claim drift 和 demo 契约测试。CI 不跑 M4b、M6，也不跑 `m1 --live` / `m3b --live`。
 
-企业 LLM 平台的十一个最小可运行模块。**零第三方依赖**：核心只用 Python 3.10+
-标准库 + SQLite；唯一的外部依赖是 M6 数据管道，它用 Docker 里的 PostgreSQL
-作为真实上游（不用 `psycopg2`，靠 `psql` + `\copy` CSV 管道）。
+[**静态 Demo**](https://aidless.github.io/agent-platform/) 回放已提交的 `results/*.json` 与一次离线 M7 运行。页面上的 Docker / ollama 路径没有在公开站重跑。
 
-本仓刻意只做「能证明的那部分」。每个模块的 `results/*.json` 里都有
-`findings`（带 PASS/FAIL 的断言）和 `refutes`（这个模块**不能**证明的事）。
-README 这里只转述结论，不复述全部细节。
+## 已提交结果里能直接核对的数字
 
-## 30 秒状态
+回放合计 **65 条 PASS、2 条预期失败、7 条说明、0 条未预期失败**。状态按每条 findings 末尾的 `→ PASS` / `→ FAIL` 解析；没有这个箭头的行是说明，不是通过。`demo/public/modules.json` 必须与 `results/*.json` 的 findings / refutes 逐字一致，`tools/check_drift.py` 会拦。
 
-| 模块 | 结论 | 证据 |
+| 模块 | 已提交结论 | 证据 |
 |---|---|---|
-| M1 LLM 网关 | smoke 5 项断言 PASS + 1 项记账核对；live 真打 ollama 3/3 成功 + 现场复现思考型模型静默失败 | `results/m1_gateway.json`, `m1_gateway_live.json` |
-| M2 可观测台 | span 派生指标 + 4 项口径断言 PASS | `results/m2_observability.json` |
-| M3 上下文压缩 | 5 策略对比，含 1 条负例基准 | `results/m3_context_compact.json` |
-| **M3b 真 LLM 摘要** | 对比占位首句拼接：占位丢 2/2 金标且自身 224tokens 比 raw 215 还胖；摘要器命中 2/2、省 68% | `results/m3b_llm_summary.json` |
-| M4 工具沙箱 | 白名单/审计/重试/死信 8 项断言 PASS | `results/m4_tool_sandbox.json` |
-| **M4b OS 级隔离** | 8 条攻击性断言全 PASS（网络/只读/non-root/CapEff/内存/fork/超时/无残留），I0 为非空性对照 | `results/m4b_os_sandbox.json` |
-| M5 韧性层 | 退避/熔断/half_open 单探测/降级链 7 项 PASS | `results/m5_resilience.json` |
-| M6 数据管道 | 契约/漂移/指纹覆盖度/确定性/慢查询/质量 7 项 PASS | `results/m6_etl.json`, `m6_etl_drift.json` |
-| **M7 端到端** | 六模块串联跑通 10 张工单：压缩省 48%、pinned 10/10、失败分类 1 个、M4 判定 {ok:5, denied:1} | `results/m7_e2e.json` |
-| **M8 成本与规模** | 三档索引全部 SCAN→USING INDEX，加速比随运行在 **3.7–7.5 / 17–21 / 38–47×** 之间（描述计划变化，不报单一倍数）；云成本 $5.81–49.03/月 | `results/m8_scale.json` |
-| **M9 execution-based 评测** | 5 题由 verify 退出码判对 + 错误动作必须判 False；脚本化 agent，测 harness/沙箱/判定链路，不测模型能力 | `results/m9_exec_eval.json` |
+| M1 网关 smoke | 5 条 `→ PASS`，另有 1 条记账说明（没有 PASS 箭头） | `results/m1_gateway.json` |
+| M1 live | 3 次 status=ok，另有 1 次 cached 重放。思考型探针 `latency_ms` 为 36350 | `results/m1_gateway_live.json` |
+| M2 | 4 条口径 `→ PASS` | `results/m2_observability.json` |
+| M3 | token 降幅：naive_sliding=69%、sliding=60%、summarize=21%、tag_filter=44%（最优 naive_sliding=69%）。同一条负例写成 2 条预期失败 | `results/m3_context_compact.json` |
+| M3b smoke | raw 215 tokens，摘要器省 68%，占位摘要 224 tokens。摘要器是假上游 | `results/m3b_llm_summary.json` |
+| M4 | 8 条 `→ PASS`。这一层仍是进程内白名单 | `results/m4_tool_sandbox.json` |
+| M4b | 9 条 `→ PASS`（I0 对照、I1–I7、无残留）。需要本机已有镜像，CI 不重跑 | `results/m4b_os_sandbox.json` |
+| M5 | 7 条 `→ PASS` | `results/m5_resilience.json` |
+| M6 | `m6_etl.json` 7 条 PASS；drift 文件另有 3 条 PASS 和 3 条 `→ SKIPPED`。同步门禁仍是 v1，v2 没有接到拒同步判定 | `results/m6_etl.json`, `results/m6_etl_drift.json` |
+| M7 | 1181 → 620，平均 48%，pinned 10 条，工具判定 `{'denied': 1, 'ok': 5}` | `results/m7_e2e.json` |
+| M8 | 这一次 Q2 是三档加速 [5.48, 22.44, 42.01]。另三次墙钟写在 refute 里：3.83→7.51 与 38×–47×；10k 档没有记录过区间。月成本 $5.81/月 到 $49.03/月，只按 `m7_e2e.json` 的 token 外推，Q3 没有 `→ PASS` | `results/m8_scale.json` |
+| M9 | 4 条 `→ PASS`。脚本化动作，不测模型能力 | `results/m9_exec_eval.json` |
 
-加分项不是「又加了一个模块」，而是三件事：
-1. **M7 把六个孤立模块串成了一条真链路**（客服工单问答），端到端口径与单点口径的差异自己暴露出来。
-2. **M4b 把 README 里声明的「不是 OS 隔离」补成真 OS 隔离**（`python:3.12-slim` + 8 条攻击用例），其中"无残留容器"一条抓出了我自己的真 bug（`docker kill` 异步导致残留）。
-3. **M3b/M6-v2 把另两条已声明边界也补了**。
+## 两条运行路径
 
-## Demo：M7 工单链路
-
-`demo/` 把 M7 的离线链路做成一页可回放的证据面板：左侧选工单，中间看六步链路，
-右侧每个数字都能追到 SQLite 表/字段；本地模式可以现场重跑。
-`demo/public/modules.json` 另外回放 M1–M9 的 findings/refutes（11 个模块、65 条 PASS、
-2 条预期失败、0 条未预期失败），状态按每条断言末尾的标记解析。
+离线路径不需要 API key、Docker 或 ollama。克隆后在普通 Python 3.10+ 上跑：
 
 ```bash
-python3 demo/server.py                  # http://127.0.0.1:8000/
-make demo-build                         # 生成静态回放 demo/public/runs.json
-make demo-test                          # Demo 契约测试
+make deps           # docker / ollama 缺失不会失败
+make gates          # 与 CI 相同：先对账已提交结果，再重跑 9 个离线模块
 ```
 
-静态回放只发布 `demo/public/`，不需要后端。详见 [demo/README.md](demo/README.md)。
+`make gates` 在 smoke 之前跑 drift。smoke 会改写 `results/*.json` 里的墙钟字段；那些新数字不是上面表里的已提交证据，不要顺手提交，除非你打算更换冻结结果。
 
-## 复现（一条命令，全部离线）
+可选路径，默认 CI 不跑，缺依赖时打印 `→ SKIPPED` 并以 0 退出，不写成 PASS，也不覆盖已有结果文件：
 
 ```bash
-cd agent-platform
-make help           # 列出所有命令 + 自动发现的模块清单
-make deps           # 依赖可用性自检（缺 docker/ollama 只影响对应模块）
-make smoke-offline  # CI 同款：只跑不依赖外部服务的模块（11 个里的 10 个）
-make gates          # 上面 + 静态检查（编译 / 绝对路径 / 结果契约）+ 证据扫描
-make smoke          # 含需要 docker 的 M6，本地全量
+make smoke          # 9 个离线模块 + M4b + M6；缺依赖的两项记 SKIP
+python3 src/m4b_os_sandbox.py --smoke
+# 需要本机已经有 docker，以及已经存在的镜像 python:3.12-slim。仓库不拉取镜像。
+python3 src/m6_etl.py --smoke
+python3 src/m6_etl.py --drift
+# 需要一个已经在跑的容器 aihot-db-1（用户 aihot，库 aplat_etl）。仓库没有 compose，不会创建它。
+python3 src/m1_gateway.py --live
+python3 src/m3b_llm_summary.py --live
+# 需要本机 ollama。显存不够时上游被杀掉，是环境限制，不是离线 smoke 的失败。
 ```
 
-模块**不写死**在 Makefile 里——用 `$(wildcard src/m[0-9]*.py)` 发现，
-新增 `src/m9_*.py` 后自动纳入。`tools/deps_check.py` 可单独跑。
+`make smoke-offline` 只跑那 9 个模块。其中出现 SKIP 会失败，因为这组不应该跳过。
 
-想逐个手跑（结果与上面等价）：
+## Demo
 
 ```bash
-python3 src/m1_gateway.py --smoke        # 幂等/记账/降级/熔断/模型解析/静默失败
-python3 src/m2_observability.py --smoke   # 合成 40 请求，验证指标口径
-python3 src/m3_context_compact.py --smoke # 5 种压缩策略 + 负例基准
-python3 src/m3b_llm_summary.py --smoke    # 真 LLM 摘要 vs 占位拼接（离线假上游）
-python3 src/m4_tool_sandbox.py --smoke    # 白名单/审计/重试/死信
-python3 src/m4b_os_sandbox.py --smoke     # 真 docker 隔离，8 条攻击断言
-python3 src/m5_resilience.py --smoke      # 退避形状/熔断状态机/降级
-python3 src/m6_etl.py --smoke             # 契约/漂移/指纹/确定性/慢查询/质量
-python3 src/m7_e2e.py --smoke             # 六模块端到端，10 张工单
-python3 src/m8_scale.py --smoke           # 并发/索引规模/云成本推演
+python3 demo/server.py     # http://127.0.0.1:8000/  会现场重跑离线 M7
+make demo-build            # 写出 demo/public/runs.json 与 modules.json
+make demo-test
 ```
 
-补充说明：
-- `m4b` 与 `m6` 需要本机有 `python:3.12-slim` 镜像 / `aihot-db-1` 容器
-  （PostgreSQL）。缺失时 m4b 会记 **SKIPPED 而不是假 PASS**。
-- `m1 --live` / `m3b --live` 需要 ollama 与可用显存；本机显存被别的训练
-  任务占满时 llama-server 会被 SIGKILL，**这不是本仓缺陷**，见下文环境记录。
+静态页只发布 `demo/public/`。本地服务会把 M7 再跑一遍并和 `results/m7_e2e.json` 对账。模块区的「重跑」只是重读已提交 JSON，不是重跑 M4b 或 M6。详见 [demo/README.md](demo/README.md)。
 
-M1 的 live 模式要单独跑，且每次用干净 db（复用旧库会让幂等键命中历史，
-把首请求显示成 cached——这是本次真实踩到的坑）：
-
-```bash
-python3 src/m1_gateway.py --live    # 需要 ollama serve 在 127.0.0.1:11434
-```
-
-## 核心模块各自证明了什么
+## 各模块实际证明了什么
 
 ### M1 网关：`src/aplat/gateway.py`
 
-`LLMGateway.chat(ChatRequest) -> ChatResponse`。四个企业刚需性质都有断言兜底：
+`LLMGateway.chat` 在 `--smoke` 里用假上游检查四件事：同 idempotency key 的重放不再记 token；熔断打开时不打上游；超时会试 fallback，再失败则 `error / 502`；每次调用写一行 `gateway_request`。本机模型单价按 0 记，这是口径，不是记账失败。
 
-- **幂等重放**：同 `idempotency_key` 命中时返回 `status=cached`、`total_tokens=0`、
-  `cost_usd=0.0`、`replay_of` 指向首个 `request_id`。
-- **熔断不白烧调用**：`CircuitBreaker` 判 open 时直接返回
-  `status=degraded / http_status=503 / error_kind=circuit_open`，**不打上游**。
-  （初版在 open 时把 primary 换成 fallback，而 cheap 路由两者同名 → 等于换个
-  名字再失败一次，白烧一次上游调用。smoke 断言抓到了这个 bug。）
-- **超时降级**：timeout 时用 `fallback` 模型重试；仍失败落 `error / 502`。
-- **记账**：每次调用写 `gateway_request` 一行，含 prompt/completion/total tokens、
-  单调时钟延迟、成本、`cache_hit`、`replay_of`。本机模型单价记为 0（这是口径，
-  不是记账失败）；外部模型价（gpt-4o-mini 等）只用于对照。
-
-**两个只有真跑才会暴露的 bug**（smoke 全绿时它们都藏着，靠 `--live` + 真服务抓出来）：
-
-1. **client 指定的 model 被无声丢弃**。`chat()` 原来直接取 `route_cfg["primary"]`，
-   于是 OpenAI 兼容端点上 `curl` 请求 `llama3.2:3b`、服务实际用了 `qwen3:8b`，
-   调用方毫不知情。修法是 `_resolve_model()`：显式点名**已知模型**时尊重请求，
-   未知模型名才回落到 route primary，并把决断理由写进 span 的 `model_note`。
-2. **思考型模型的空回答被记成成功**。qwen3 系把 token 预算烧在 `thinking` 通道，
-   `message.content` 是空串、`done_reason=length`，而 HTTP 仍是 200。原网关记
-   `status=ok`，M2 的错误率因此漏掉整类失败。修法：`ollama_client` 透传
-   `thinking`/`done_reason`，网关检测空 content → `status="empty"`、
-   `error_kind="empty_content"`，span 记 `error`，M2 的失败率把 `empty` 计入。
-
-现场复现（`results/m1_gateway_live.json` 的 `thinking_model_probe`）：
-显式点名 `qwen3:8b`、`num_predict=64` → `status=empty`、`empty_content=true`、
-`done_reason=length`、`thinking≈102 tokens`、用时 **36.35s**。
-
-附带一个 stdlib `http.server` 版 OpenAI 兼容 `/chat/completions` 与 `/health`
-（`python3 -m aplat.gateway --serve`），不引 fastapi 以保持零依赖。
+`--live` 另有一份已提交记录，不在 CI 里重跑。其中 3 次 status=ok，思考型探针是 `qwen3:8b`、`latency_ms=36350`、`thinking_tokens=102`、`status=empty`。smoke 那一行里不再写第二套 live 秒数。
 
 ### M2 可观测台：`src/m2_observability.py`
 
-从 `gateway_request` + `span` 派生指标。四条口径断言：
+从合成的 40 条请求派生 span。四条 `→ PASS` 检查 span 覆盖、upstream 时长不超过请求时长、缓存命中的 token 为 0、失败率把 `empty` 算进去。n=40 的 p95 是描述统计，不是 SLO。
 
-- span 覆盖：每条 trace 至少 cache + upstream 两个 span。
-- 口径自洽：`upstream` span 的 `duration_ms` 不超过请求总延迟。
-- 缓存记账：`cache_hit=1` 的行 `total_tokens` 必须为 0。
-- 错误率与注入的失败率自洽。
+### M3 上下文压缩：`src/aplat/memory.py`
 
-延迟一律用 `monotonic_ms()` 差值，不用墙钟差（会被 NTP/手改时间污染）。
-`span.start_mono` 是**相对单次 chat() 起点的偏移**，所以跨请求只能比
-`duration_ms`，不能比绝对值——这一点写进了 `results` 的 `_口径` 字段。
+同一段 12 轮合成会话上比较 `raw` / `naive_sliding` / `sliding` / `summarize` / `tag_filter`。已提交降幅是：token 降幅：naive_sliding=69%、sliding=60%、summarize=21%、tag_filter=44%（最优 naive_sliding=69%）。`naive_sliding` 丢掉第 5 轮约束，结果文件里写成 2 条预期失败。`summarize` 在这一模块仍是首句截断，不是 LLM 摘要。
 
-### M3 上下文压缩 + 会话记忆：`src/aplat/memory.py`
+### M3b 摘要对照：`src/m3b_llm_summary.py`
 
-五种策略在同一 12 轮会话上对比：`raw` / `naive_sliding` / `sliding` /
-`summarize` / `tag_filter`。
+`--smoke` 的摘要器是确定性假上游：raw 215 tokens，假摘要上下文省 68%，占位拼接 224 tokens，而且丢了两个词面金标。这证明占位拼接的代价，不证明真模型摘要质量。样本是 10 轮。`--live` 才打 ollama，而且 CI 不跑。
 
-关键结论是**没有哪个策略同时最优**：
+### M4 工具沙箱：`src/aplat/sandbox.py`
 
-| 策略 | token 降幅 | 关键约束保留 |
-|---|---|---|
-| naive_sliding | 69% | **1/2（丢了）** |
-| sliding（带 pinned） | 60% | 2/2 |
-| summarize | 21% | 2/2 |
-| tag_filter | 44% | 2/2 |
+8 条 `→ PASS`：白名单外不执行、审计行数对得上、可重试错误会重试、致命错误不重试、死信在耗尽后写入。拒绝 `rm_rf` / `net.fetch` 只是策略层。
 
-`naive_sliding` 是**有意保留的负例基准**：只看最近 k 轮，第 5 轮的关键约束
-（"必须过滤教辅类"）必被截掉。它的存在证明 `pinned` 机制不是装饰。
-默认策略取 `sliding`：多花 24 tokens 换回 1 条关键约束。
+### M4b 容器实验：`src/aplat/os_sandbox.py`
 
-### M4 工具沙箱 + 重试 + 审计：`src/aplat/sandbox.py`
-
-三条同时成立才有企业价值：白名单外调用必须被拒且不进执行路径、每次调用
-（含被拒）在 `tool_audit` 留 append-only 行、可重试错误真的重试到底。
-
-审计粒度是**一次尝试一行**：4 次白名单判定 + 1 次合法执行 + flaky 2 错 1 对
-+ fatal 1 错 + 死信 5 错 = 14 行，逐行可核对。越权调用的 `attempt` 恒为 1。
+已提交的 9 条 PASS 来自一次真实 `docker run`：良性计算必须得到 42，然后检查断网、只读、非 root、CapEff 为 0、内存上限、pid 上限、超时，以及超时后没有残留容器。镜像固定为本地已有的 `python:3.12-slim`。没有镜像时命令打印 `→ SKIPPED`。这不覆盖容器逃逸、内核漏洞或 gVisor/Kata。
 
 ### M5 韧性层：`src/aplat/resilience.py`
 
-`Retrier`（指数退避 + full jitter，可注入 sleep）、`CircuitBreaker`
-（closed/open/half_open，**half_open 只放一个探测请求**防惊群）、
-`Degrader`（降级链全空时显式抛错，不静默返回空）。
+7 条 `→ PASS` 覆盖无 jitter 的指数退避、full jitter 的上界、4xx 不熔断、5xx 打开熔断、half-open 只放一个探测、降级链、以及全空时显式报错。`probe_sent` 在进程重启后归零，这是写在 refute 里的折中。
 
-`CircuitBreaker` 用 `provider_health` 表持久化状态，另有 `probe_sent` 列
-记录本窗口是否已放过探测。进程重启后 `probe_sent` 归零——一个已知且被接受
-的折中：宁可多放一个探测，也不永久卡死。
+### M6 数据管道：`src/m6_etl.py`
 
-### M6 数据管道 + schema 漂移门禁：`src/m6_etl.py`
+已提交运行使用容器 `aihot-db-1` 里的 PostgreSQL，经 `psql` 和 `\copy` 同步到 SQLite，不使用 `psycopg2`。D1–D5 加 D2b 是 7 条 PASS。D2b 证明 v2 指纹能看见「只加一个索引」，而 v1 看不见。同步是否拒绝，仍看 v1。所以 v2 没有接到拒同步判定。`--drift` 那份文件在没有新数据时把 D3/D4/D5 记成 SKIPPED，而不是用空表做成 PASS。
 
-PostgreSQL → SQLite 单向同步。`--drift` 会真往上游 `ADD COLUMN` 再 `DROP`，
-用来证明门禁**会**拒绝同步（此时 D3/D4/D5 显式记 `SKIPPED`，不用空数据
-伪造一个 PASS）。
+本仓库不创建 `aihot-db-1`。没有这个容器时 `--smoke` 跳过。
 
-慢查询用例：12k 行合成表，`customer_id` 查询从 `SCAN etl_orders` 变成
-`SEARCH etl_orders USING INDEX ix_etl_cust (customer_id=?)`。
+### M7 端到端：`src/m7_e2e.py`
 
-## 明确不做 / 已知边界
+10 张手写工单穿过网关、合成订单库、沙箱、记忆、脚本化回答和可观测记录。结果文件的 `chain` 列出 M1、M6 订单库、M4、M3、M2 五个名字；页面上的第六步是脚本化回答，不是第六个独立产品。已提交数字：1181 → 620（平均 48%），pinned 10 条，失败分类 1 个 `silent_empty_answer`，工具判定 `{'denied': 1, 'ok': 5}`。失败率是脚本注入的。
 
-写在这里而不是藏在代码注释里，因为它们决定了这个仓能拿去说什么：
+### M8 成本与规模：`src/m8_scale.py`
 
-1. ~~**M4 沙箱不是 OS 级隔离**~~ → **已于 M4b 补上 OS 级隔离**
-   （`src/aplat/os_sandbox.py` + `src/m4b_os_sandbox.py`，8 条攻击断言全 PASS）。
-   剩余边界：不覆盖容器逃逸与内核漏洞（那需要 gVisor/Kata/seccomp 白名单）。
-   原「进程内白名单」仍作为第一道防线保留，两层并用。
-2. ~~**M3 的摘要不是 LLM 摘要**~~ → **M3b 补上了真摘要路径**（`--live` 走本机
-   ollama，`--smoke` 走确定性假上游），并量出占位拼接的代价：**丢全部金标
-   约束、且自身 224 tokens 比不压缩的 raw 215 还胖**。剩余边界：占位版本仍留在
-   M3 里（负例基准），`--smoke` 的摘要器是假上游，不证明真模型质量。tag 匹配也是关键词命中，不是 embedding。
-3. **M6 的 CSV 管道不做 NULL/二进制语义转换**。本仓数据无 NULL，这个限制是
-   真的限制；生产管道应换 `psycopg2` 或 `COPY TO STDOUT BINARY`。
-4. ~~**schema 指纹只覆盖列名 + 类型**~~ → **M6 D2b 补了 v2 指纹**（列的可空性、
-   默认值、索引定义、约束定义）。对照实证：只加一个索引时 v1 指纹不变（漏报），
-   v2 指纹改变（抓到），DROP 后回到原值。M6 现在用的是 v2。
-5. **M2/M7 的 p95 不是 SLO**。n=40（合成）/n=3（live）时 p95 只是描述统计；
-   并且 **M7 的墙钟计时跑一次一个样**（连跑三次 p50 = 47.0/45.0/39.0ms，
-   p95 = 56.2/138.4/63.0ms、max = 58/210/68ms，同代码同种子）。
-   所以本仓任何延迟数字都要当区间看，不能当承诺。
-6. **token 数是估算值**（`src/aplat/tokenizer.py` 的 CJK/拉丁规则），不是 BPE。
-7. **多副本部署下熔断是进程内的**。`provider_health` 不是分布式信号量。
-8. **M6 依赖宿主机 docker 权限**，不是纯本地可跑。
-9. **本机 LLM 推理受显存/内存制约**：`m1 --live` / `m3b --live` 在显存被
-   其他训练任务占满时 llama-server 会被 SIGKILL（2026-10-12 实测：宿主机
-   AIE 训练占 3454MiB GPU，剩余 2.2G 不足以加载 3B 模型，CPU 加载缓冲
-   1.3G 也分配失败）。**这是环境限制而非代码缺陷**；离线 smoke 路径全部
-   不依赖它。
+Q1 用 `sleep(20ms)` 假上游看网关会不会放大调用。Q2 在合成的 1k/10k/100k 行上检查计划从 SCAN 变成 USING INDEX。已提交的这一次是三档加速 [5.48, 22.44, 42.01]。refute 里的 3.83→7.51 与 38×–47× 是另外三次墙钟；10k 档没有记录过区间。不要把这些写成一个倍数。
+
+Q3 把 `m7_e2e.json` 的 token 合计按公开价目外推，得到 $5.81/月 到 $49.03/月。`m1_gateway_live.json` 没有 `summary.tokens`，不进入这个合计。Q3 那一行没有 `→ PASS`。价目不含折扣，也不是本机账单。
+
+### M9 执行式评测：`src/m9_exec_eval.py`
+
+5 道手写题由 verify 退出码判对，另有一条故意写错的动作必须判 False。动作序列是手写的，测的是 harness、审计和判定是否自洽。求和用 bash 算术，不依赖 `bc`。本地 bash 没有套上 M4b。
+
+## 明确不做
+
+1. M4 不是 OS 隔离。M4b 在 Docker 可用时补了一组容器实验，仍不覆盖逃逸和内核漏洞。
+2. M3 的摘要不是 LLM 摘要。M3b 的 `--smoke` 也不是；它只量出占位拼接会丢金标，并且 224 tokens 比 raw 215 更长。
+3. M6 的 CSV 管道不做 NULL / 二进制转换。同步门禁用 v1 指纹。v2 没有接到拒同步判定。
+4. M2 / M7 的 p95 不是 SLO。延迟每次跑都会变。
+5. token 数是 `src/aplat/tokenizer.py` 的估算，不是 BPE。
+6. 熔断状态在进程内。`provider_health` 不是分布式信号量。
+7. 没有外部用户、没有生产流量、没有在 CI 里打真实模型分数。
 
 ## 仓库地图
 
 ```
-src/aplat/common.py        SQLite DDL（9 表）+ 分位数 + bootstrap CI + 价格表
-src/aplat/gateway.py       LLMGateway.chat + stdlib OpenAI 兼容 serve()
-src/aplat/ollama_client.py urllib 直打 ollama /api/chat
-src/aplat/tokenizer.py     CJK/拉丁混合 token 估算
-src/aplat/resilience.py    CircuitBreaker / Retrier / Degrader
-src/aplat/memory.py        会话记忆（tag 索引 + pinned 保护）
-src/aplat/sandbox.py       工具白名单 + 参数校验 + 审计链 + 死信
-src/aplat/os_sandbox.py       DockerSandbox：把代码关进受限容器执行（M4b）
-src/m1_gateway.py          M1 入口（--smoke / --live）
-src/m3b_llm_summary.py     M3b 入口：真 LLM 摘要 vs 占位
-src/m4b_os_sandbox.py      M4b 入口：8 条 OS 隔离攻击断言
-src/m7_e2e.py              M7 入口：端到端工单链路
-src/m8_scale.py            M8 入口：并发/索引/成本
-src/m2_observability.py    M2 入口
-src/m3_context_compact.py  M3 入口
-src/m4_tool_sandbox.py     M4 入口
-src/m5_resilience.py       M5 入口
-src/m6_etl.py              M6 入口（--drift 制造真漂移）
-results/*.json             每个模块的 findings + refutes
-Makefile                   help/smoke/smoke-offline/gates/scan/deps/clean（模块自动发现）
-tools/evidence_scan.py     跨仓「无证据数字」扫描（--selftest 可自证检测器活着）
-tools/deps_check.py        依赖可用性只读探测，不安装不联网
-docs/engineering.md        门禁为什么长这样 / 口径 / 边界 / 陌生人复现顺序
-.github/workflows/gates.yml CI 只跑离线档（理由见文件头注释与 engineering.md 第 3 节）
+src/aplat/                 标准库 + SQLite 的共用代码，版本 0.1.0
+src/m1_gateway.py … m9_exec_eval.py
+results/*.json             已提交的 findings + refutes。evidence_scan*.json 被 gitignore
+Makefile                   deps / smoke-offline / gates / smoke
+tools/check_drift.py       README、demo、results 的对账
+tools/check_contract.py    findings 与 refutes 非空，且 src/ 无开发机绝对路径
+tools/deps_check.py        只读探测。docker 与 ollama 都是可选
+tools/evidence_scan.py     无证据数字的审计，不阻断
+FAILURE_MODES.md           这些结论不支持什么
+docs/engineering.md        门禁为什么只跑离线档
+demo/                      M7 离线回放
+framework-agent/           单独的离线练习，不计入上面 11 个模块的 PASS 数
+.github/workflows/gates.yml
 ```
 
 License: MIT。

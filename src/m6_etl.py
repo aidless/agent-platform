@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -215,6 +216,26 @@ def explain(db: Path, sql: str, params=()) -> tuple[str, list[str]]:
     return " | ".join(plan), [tuple(r) for r in rows]
 
 
+def docker_postgres_ready() -> tuple[bool, str]:
+    """M6 不自备数据库。没有现成容器时必须跳过，不能写成 FAIL 或假 PASS。"""
+    if shutil.which("docker") is None:
+        return False, "PATH 里没有 docker"
+    try:
+        r = subprocess.run(
+            ["docker", "inspect", "-f", "{{.State.Running}}", CONTAINER],
+            capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return False, f"docker 不可用：{e}"
+    if r.returncode != 0 or r.stdout.strip() != "true":
+        detail = (r.stderr or r.stdout or "").strip()[:160]
+        return False, (
+            f"没有正在运行的容器 {CONTAINER}"
+            + (f"（{detail}）" if detail else "")
+            + "。本仓库没有 compose 文件，不会自动创建它"
+        )
+    return True, "ok"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--smoke", action="store_true")
@@ -222,6 +243,14 @@ def main() -> int:
                     help="故意改 schema 制造漂移，验证门禁会拒绝同步")
     ap.add_argument("--db", default=str(ROOT / "data" / "aplat_etl.db"))
     a = ap.parse_args()
+
+    ready, why = docker_postgres_ready()
+    if not ready:
+        print(f"环境不可用：{why}")
+        print("本模块需要宿主机上已经在跑的 PostgreSQL 容器 "
+              f"{CONTAINER}（库 {PGDB}，用户 {PGUSER}）；"
+              "跳过（不是 PASS） → SKIPPED")
+        return 0
 
     findings: list[str] = []
     out: dict = {}
@@ -358,7 +387,8 @@ def main() -> int:
                 "aplat_etl 是本次新建的独立库，不碰已有的 aihot 数据。",
                 "漂移用例靠 ADD/DROP COLUMN 注入；已用 DROP 清理，"
                 "但 ALTER 会让表短暂不可用，生产上应先在从库演练。",
-                "指纹只覆盖列名+类型，不覆盖约束/索引/默认值。",
+                "本次拒同步用的是 v1 指纹（列名+类型）。"
+                "v2 能反映索引和约束变化，但不是这次拒同步的条件。",
             ],
             "results": out,
         }
@@ -427,8 +457,9 @@ def main() -> int:
             "生产管道应换 psycopg2 或 COPY TO STDOUT BINARY。",
             "慢查询数据是 12k 行合成表，只能证明『索引改变查询计划』，"
             "给不出真实数据量下的绝对耗时。",
-            "schema 指纹只覆盖列名+类型，不覆盖约束、索引、默认值；"
-            "上游加一条 CHECK 约束不会被本门禁发现。",
+            "同步门禁（D2）哈希的是 v1：列名+类型。"
+            "D2b 显示 v2（可空、默认值、索引定义、约束定义）能发现「只加索引」，"
+            "但 v2 没有接到拒同步判定；加索引或 CHECK 仍不会拦住同步。",
         ],
         "results": out,
     }

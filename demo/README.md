@@ -34,7 +34,7 @@ python3 -m http.server -d demo/public   # 任意静态服务器
 
 构建脚本会把当前 `results/m7_e2e.json` 与本次运行做 36 项对账；
 对不上会以非零退出码结束，不会静默生成一份“看起来对”的页面。
-`modules.json` 是 M1–M9 的冻结回放：本地 `results/` 不入库，公开页展示已提交的这份回放。
+`modules.json` 是已提交 `results/*.json` 的回放。公开页不重跑 Docker 或 ollama。
 
 ## 测试
 
@@ -61,7 +61,7 @@ python3 -m unittest demo/test_demo.py -v
 5. **底部**：M7 自己声明的 `refutes`，说明这个 Demo 不能证明什么。
 6. **M1–M9 模块证据**：11 个模块的 findings/refutes 回放；状态按每条断言末尾的
    `PASS`/`FAIL` 与“预期失败/负例基准”标记计数，不按子串。
-   当前回放是 65 PASS、2 条预期失败、7 条说明行、0 条未预期失败。
+   当前回放是 65 条 PASS、2 条预期失败、7 条说明、0 条未预期失败。
 
 ## 三分钟面试讲法
 
@@ -100,7 +100,7 @@ demo/
 
 ## 边界
 
-- `results/` 是生成物，不参与 `worktree_dirty` 判断；`runs.json` 自己也不参与。
+- 已提交的 `results/*.json` 算工作区内容。只有这次构建写出的 `runs.json` / `modules.json` 不参与 `worktree_dirty`。
 - 静态页是回放，不是实时服务；页面会标“静态回放”并显示构建 commit。
 - 公开部署只发布 `demo/public/`，不暴露本地服务。
 - 这个 Demo 不证明真实客服流量、真实 LLM 可用率或 SLO；这些边界来自 M7 的 `refutes`，页面上直接展示。
