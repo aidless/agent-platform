@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
 jobs:
   offline-gates:
     # CI 只跑离线档。理由（与 Makefile 注释一致）：
