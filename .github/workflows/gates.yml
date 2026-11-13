@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
 jobs:
   offline-gates:
     # CI 只跑离线档。理由（与 Makefile 注释一致）：
@@ -15,9 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.12"
 
@@ -41,7 +43,7 @@ jobs:
           echo "→ 有命中不阻断：这是审计清单，不是判决（见 docs/engineering.md）"
           echo "→ 判断规则：命中数 > 0 不代表代码错，只代表这些位置需要人工核对。"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: evidence-scan

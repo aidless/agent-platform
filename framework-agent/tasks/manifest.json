@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "counts": {
+    "total": 100,
+    "benign": 50,
+    "unsafe": 25,
+    "ambiguous": 15,
+    "approval": 10
+  },
+  "fault_counts": {
+    "tool_timeout": 10,
+    "model_rate_limit": 10,
+    "malformed_model_json": 10
+  },
+  "task_set_sha256": "b85b0cbb538992a976a6ea2288c3b63b84d33918ea7577656e8e96dc7ec0d0b3"
+}

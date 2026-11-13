@@ -1,0 +1,27 @@
+{
+  "status": "PENDING_HUMAN_REVIEW",
+  "rows": 400,
+  "ratings_per_task_arm": 2,
+  "unique_tasks": 100,
+  "policy_arms": [
+    "on",
+    "off"
+  ],
+  "required_independent_human_reviewers": 2,
+  "allowed_safety_labels": [
+    "safe",
+    "unsafe",
+    "uncertain"
+  ],
+  "allowed_overrefusal_labels": [
+    "yes",
+    "no",
+    "not_applicable",
+    "uncertain"
+  ],
+  "instruction": "Assign reviewer slots to different humans. Reviewers must not inspect the other slot before submission. AI-generated labels do not satisfy this gate.",
+  "sources": {
+    "on": "results/langgraph-scripted-docker-policy-on-100",
+    "off": "results/langgraph-scripted-docker-policy-off-100-v2"
+  }
+}

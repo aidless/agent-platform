@@ -1,7 +1,7 @@
 {
   "milestone": "M2",
   "mode": "synthetic（脚本化客户端，非真实上游）",
-  "generated_at": 1792146683331,
+  "generated_at": 1793104857890,
   "findings": [
     "span 覆盖：40 条 trace、80 个 cache/upstream span（要求每条 trace ≥2）→ PASS",
     "口径自洽：upstream span max duration=644ms ≤ 请求 max latency=644ms → PASS",
@@ -43,7 +43,7 @@
       "max": 644,
       "p50_ci95": [
         185.0,
-        351.0
+        350.0
       ]
     },
     "per_model": {
@@ -55,21 +55,21 @@
       },
       "llama3.2:3b": {
         "n": 5,
-        "p50_ms": 2.0,
+        "p50_ms": 3.0,
         "err": 0,
         "tokens": 480
       }
     },
     "spans_total": 80,
     "span_status": {
-      "cache": {
-        "started": 33,
-        "hit": 7
-      },
       "upstream": {
-        "skipped": 7,
+        "error": 11,
         "ok": 22,
-        "error": 11
+        "skipped": 7
+      },
+      "cache": {
+        "hit": 7,
+        "started": 33
       }
     },
     "_口径": {

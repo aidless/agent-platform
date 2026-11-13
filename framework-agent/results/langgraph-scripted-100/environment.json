@@ -1,0 +1,14 @@
+{
+  "planner": "ScriptedPlanner",
+  "workers": 4,
+  "elapsed_seconds": 1.1134238660015399,
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+  "packages": {
+    "langgraph": "0.5.4",
+    "langchain-core": "0.3.29",
+    "langchain-openai": "0.3.0",
+    "openai": "2.54.0"
+  },
+  "tool_effects": "process-local mocks only"
+}

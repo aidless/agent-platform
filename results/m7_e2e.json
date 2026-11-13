@@ -1,7 +1,7 @@
 {
   "milestone": "M7",
   "mode": "offline（ScriptedUpstream，注入 5% timeout + 5% 空回答，可重复）",
-  "generated_at": 1792146694042,
+  "generated_at": 1793104875745,
   "chain": [
     "M1 gateway",
     "M6 order store",
@@ -33,12 +33,12 @@
       "silent_empty_answer": 1
     },
     "latency_ms": {
-      "p50": 25.5,
-      "p95": 27.5,
-      "max": 28,
+      "p50": 56.0,
+      "p95": 64.2,
+      "max": 66,
       "p50_ci95": [
-        24.0,
-        27.0
+        50.5,
+        61.0
       ]
     },
     "context_tokens": {
@@ -53,8 +53,8 @@
     },
     "flags": {
       "answered_without_tool_data": 1,
-      "tool_denied": 1,
       "empty_content": 1,
+      "tool_denied": 1,
       "degraded": 1
     }
   },
@@ -66,7 +66,7 @@
       "tool_verdict": "ok",
       "llm_status": "ok",
       "answer_len": 22,
-      "latency_ms": 27,
+      "latency_ms": 60,
       "failure": "",
       "flags": [],
       "ctx_tokens": 60,
@@ -79,7 +79,7 @@
       "tool_verdict": "ok",
       "llm_status": "ok",
       "answer_len": 22,
-      "latency_ms": 26,
+      "latency_ms": 53,
       "failure": "",
       "flags": [],
       "ctx_tokens": 61,
@@ -92,7 +92,7 @@
       "tool_verdict": "",
       "llm_status": "degraded",
       "answer_len": 14,
-      "latency_ms": 24,
+      "latency_ms": 51,
       "failure": "",
       "flags": [
         "degraded"
@@ -107,7 +107,7 @@
       "tool_verdict": "ok",
       "llm_status": "ok",
       "answer_len": 22,
-      "latency_ms": 27,
+      "latency_ms": 59,
       "failure": "",
       "flags": [],
       "ctx_tokens": 64,
@@ -120,7 +120,7 @@
       "tool_verdict": "",
       "llm_status": "empty",
       "answer_len": 0,
-      "latency_ms": 24,
+      "latency_ms": 49,
       "failure": "silent_empty_answer",
       "flags": [
         "empty_content"
@@ -135,7 +135,7 @@
       "tool_verdict": "denied",
       "llm_status": "ok",
       "answer_len": 22,
-      "latency_ms": 25,
+      "latency_ms": 51,
       "failure": "",
       "flags": [
         "tool_denied",
@@ -151,7 +151,7 @@
       "tool_verdict": "",
       "llm_status": "ok",
       "answer_len": 14,
-      "latency_ms": 23,
+      "latency_ms": 62,
       "failure": "",
       "flags": [],
       "ctx_tokens": 61,
@@ -164,7 +164,7 @@
       "tool_verdict": "ok",
       "llm_status": "ok",
       "answer_len": 22,
-      "latency_ms": 28,
+      "latency_ms": 66,
       "failure": "",
       "flags": [],
       "ctx_tokens": 62,
@@ -177,7 +177,7 @@
       "tool_verdict": "",
       "llm_status": "ok",
       "answer_len": 14,
-      "latency_ms": 24,
+      "latency_ms": 50,
       "failure": "",
       "flags": [],
       "ctx_tokens": 60,
@@ -190,7 +190,7 @@
       "tool_verdict": "ok",
       "llm_status": "ok",
       "answer_len": 14,
-      "latency_ms": 26,
+      "latency_ms": 60,
       "failure": "",
       "flags": [],
       "ctx_tokens": 66,
