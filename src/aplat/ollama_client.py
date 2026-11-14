@@ -18,7 +18,6 @@ import json
 import socket
 import urllib.error
 import urllib.request
-from typing import Any
 
 DEFAULT_BASE = "http://127.0.0.1:11434"
 

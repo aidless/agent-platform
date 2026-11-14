@@ -36,7 +36,7 @@ from aplat import common as C                                      # noqa: E402
 from aplat.gateway import ChatRequest, LLMGateway                  # noqa: E402
 from aplat.memory import MemoryStore, Turn                          # noqa: E402
 from aplat.ollama_client import OllamaClient, OllamaError           # noqa: E402
-from aplat.resilience import BreakerConfig, CircuitBreaker, Retrier  # noqa: E402
+from aplat.resilience import BreakerConfig, Retrier  # noqa: E402
 from aplat.sandbox import Sandbox, ToolPolicy                       # noqa: E402
 from aplat.tokenizer import count_tokens                           # noqa: E402
 

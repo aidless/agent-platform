@@ -15,8 +15,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sqlite3
-import statistics
 import sys
 import tempfile
 import threading
@@ -30,7 +28,6 @@ sys.path.insert(0, str(ROOT / "src"))
 from aplat import common as C                                     # noqa: E402
 from aplat.gateway import ChatRequest, LLMGateway                 # noqa: E402
 from aplat.ollama_client import OllamaClient                      # noqa: E402
-from aplat.tokenizer import count_tokens                          # noqa: E402
 
 # 外部模型价（USD / 1K tokens）。**只用于记账推演，本机不发起任何调用**。
 CLOUD_PLANS = {

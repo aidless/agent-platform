@@ -16,7 +16,6 @@ jitter 由 seeded random 提供，保证同一批请求的重试时间序列可�
 
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable

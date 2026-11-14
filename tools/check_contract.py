@@ -16,7 +16,6 @@ python 文件能单独跑、能进 CI、退出码语义干净。
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 REQUIRED = ("findings", "refutes")

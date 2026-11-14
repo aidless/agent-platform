@@ -44,21 +44,18 @@
 from __future__ import annotations
 
 import argparse
-import shutil
 import subprocess
 import sys
 import tempfile
-import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from aplat import common as C                                    # noqa: E402
-from aplat.gateway import ChatRequest, LLMGateway                # noqa: E402
+from aplat.gateway import LLMGateway                # noqa: E402
 from aplat.memory import MemoryStore, Turn                        # noqa: E402
-from aplat.ollama_client import OllamaClient, OllamaError         # noqa: E402
-from aplat.resilience import BreakerConfig, Retrier               # noqa: E402
+from aplat.ollama_client import OllamaClient         # noqa: E402
 from aplat.sandbox import Sandbox, ToolPolicy                     # noqa: E402
 
 # ---------------------------------------------------------------- 任务集

@@ -131,7 +131,7 @@ def main() -> int:
     saved = {st: v["token_saving"] for st, v in per.items() if st != "raw"}
     best = max(saved, key=lambda s: saved[s])
     findings.append(
-        f"token 降幅：" + "、".join(f"{s}={saved[s]*100:.0f}%" for s in saved)
+        "token 降幅：" + "、".join(f"{s}={saved[s]*100:.0f}%" for s in saved)
         + f"（最优 {best}={saved[best]*100:.0f}%）。基线 raw 为 0% 作对照。")
 
     # 2) 关键约束轮次：生产策略丢了就是 FAIL；naive_sliding 是负例基准，预期 FAIL
